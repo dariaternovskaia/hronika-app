@@ -1,0 +1,789 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body {
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: #0b0e14;
+    color: #e8edf5;
+    padding: 0 0 80px 0;
+    min-height: 100vh;
+}
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 16px;
+}
+/* Экран входа */
+.login-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 20px;
+    padding: 20px;
+    background: #0b0e14;
+}
+.login-screen h1 {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    color: #7a8ba8;
+}
+.login-screen .subtitle {
+    color: #5a6a7a;
+    font-size: 14px;
+    text-align: center;
+    max-width: 340px;
+}
+.login-screen input {
+    width: 100%;
+    max-width: 340px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid #2a3344;
+    background: #141a24;
+    color: #e8edf5;
+    font-size: 16px;
+    outline: none;
+}
+.login-screen input:focus {
+    border-color: #5a7a9a;
+}
+.login-screen button {
+    width: 100%;
+    max-width: 340px;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: #2a4a6a;
+    color: white;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.login-screen .error {
+    color: #d46a6a;
+    font-size: 14px;
+    text-align: center;
+    max-width: 340px;
+}
+.login-screen .hint {
+    font-size: 12px;
+    color: #3a4a5a;
+    text-align: center;
+    max-width: 340px;
+}
+/* Навигация */
+.nav {
+    display: flex;
+    gap: 4px;
+    background: #141a24;
+    border-radius: 14px;
+    padding: 4px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 8px;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+    border: 1px solid #1f2838;
+}
+.nav button {
+    flex: 1;
+    min-width: 50px;
+    padding: 10px 6px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #7a8ba8;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    word-break: break-word;
+}
+.nav button.active {
+    background: #2a3a4a;
+    color: #e8edf5;
+}
+.nav button:hover {
+    background: #1f2a38;
+    color: #c8d5e5;
+}
+/* Экраны */
+.screen {
+    display: none;
+    animation: fadeIn 0.25s ease;
+}
+.screen.active {
+    display: block;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+/* Календарь */
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.calendar-header h2 {
+    font-size: 20px;
+    font-weight: 400;
+    color: #aabbcc;
+}
+.month-nav button, .year-nav button {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid #2a3344;
+    background: transparent;
+    color: #aabbcc;
+    cursor: pointer;
+    font-size: 14px;
+}
+.month-nav button:hover, .year-nav button:hover {
+    background: #1f2a38;
+}
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    margin-bottom: 20px;
+}
+.calendar-grid .day-name {
+    text-align: center;
+    font-size: 11px;
+    color: #5a6a7a;
+    padding: 6px 0;
+    font-weight: 500;
+}
+.calendar-grid .day-cell {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #141a24;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 14px;
+    color: #aabbcc;
+    min-height: 44px;
+    border: 1px solid #1a2230;
+}
+.calendar-grid .day-cell:hover {
+    background: #1f2a38;
+}
+.calendar-grid .day-cell.other-month {
+    opacity: 0.25;
+}
+.calendar-grid .day-cell .day-number {
+    font-size: 15px;
+    font-weight: 500;
+}
+.calendar-grid .day-cell .day-colors {
+    display: flex;
+    gap: 2px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.calendar-grid .day-cell .day-colors .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+/* Прогресс */
+.challenge-progress {
+    background: #141a24;
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 20px;
+    border: 1px solid #1f2838;
+}
+.challenge-progress h3 {
+    font-size: 14px;
+    font-weight: 500;
+    color: #7a8ba8;
+    margin-bottom: 12px;
+}
+.progress-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+.progress-item .label {
+    min-width: 80px;
+    color: #aabbcc;
+}
+.progress-item .bar-bg {
+    flex: 1;
+    height: 6px;
+    border-radius: 4px;
+    background: #1f2838;
+    overflow: hidden;
+}
+.progress-item .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.4s;
+}
+.progress-item .count {
+    min-width: 30px;
+    text-align: right;
+    color: #7a8ba8;
+    font-size: 12px;
+}
+.hint {
+    text-align: center;
+    font-size: 12px;
+    color: #3a4a5a;
+    margin-top: 8px;
+}
+/* Страничка дня */
+.day-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.day-page-header h2 {
+    font-size: 22px;
+    font-weight: 400;
+}
+.back-btn, .save-btn {
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid #2a3344;
+    background: transparent;
+    color: #aabbcc;
+    cursor: pointer;
+    font-size: 14px;
+}
+.save-btn {
+    border-color: #2a4a5a;
+    color: #6a9aaa;
+}
+.back-btn:hover, .save-btn:hover {
+    background: #1f2a38;
+}
+/* Рекомендации */
+.recommendations {
+    background: #1a2a2a;
+    border-radius: 14px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border: 1px solid #2a4a4a;
+}
+.recommendations h4 {
+    font-size: 13px;
+    color: #6aaa7a;
+    margin-bottom: 6px;
+}
+.recommendations .rec-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 14px;
+    color: #aabbcc;
+}
+.recommendations .rec-item button {
+    background: #2a4a4a;
+    border: none;
+    color: #aabbcc;
+    padding: 2px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 12px;
+}
+/* Список дел */
+.todo-section {
+    margin-bottom: 20px;
+}
+.todo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.todo-header h3 {
+    font-size: 16px;
+    font-weight: 500;
+    color: #aabbcc;
+}
+.todo-header button {
+    padding: 4px 14px;
+    border-radius: 16px;
+    border: 1px solid #2a4a5a;
+    background: transparent;
+    color: #6a9aaa;
+    cursor: pointer;
+    font-size: 13px;
+}
+.todo-header button:hover {
+    background: #1a2a3a;
+}
+.todo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #10161e;
+    margin-bottom: 6px;
+    border-left: 3px solid #2a3344;
+    flex-wrap: wrap;
+}
+.todo-item .todo-check {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid #3a4a5a;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.todo-item .todo-check.done {
+    border-color: #4a7a5a;
+    background: #1a3a2a;
+}
+.todo-item .todo-check.done::after {
+    content: '✓';
+    color: #6aaa7a;
+    font-size: 14px;
+}
+.todo-item .todo-text {
+    flex: 1;
+    font-size: 14px;
+    word-break: break-word;
+    min-width: 60px;
+}
+.todo-item .todo-text.done-text {
+    opacity: 0.4;
+}
+.todo-item .todo-delete {
+    background: none;
+    border: none;
+    color: #5a4a4a;
+    cursor: pointer;
+    font-size: 16px;
+}
+.todo-item .todo-delete:hover {
+    color: #d46a6a;
+}
+.todo-item .todo-files {
+    width: 100%;
+    padding-left: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+}
+.todo-item .todo-files .file-tag {
+    background: #1a2230;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    color: #7a8ba8;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.todo-item .todo-files .file-tag .remove-file {
+    cursor: pointer;
+    color: #5a4a4a;
+    font-size: 12px;
+}
+.todo-item .todo-files .file-tag .remove-file:hover {
+    color: #d46a6a;
+}
+.todo-upload-btn {
+    padding: 4px 12px;
+    border-radius: 12px;
+    border: 1px dashed #2a4a5a;
+    background: transparent;
+    color: #4a7a8a;
+    cursor: pointer;
+    font-size: 11px;
+}
+.todo-upload-btn:hover {
+    background: #0a1a2a;
+}
+.notes-section textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid #1f2838;
+    background: #10161e;
+    color: #e8edf5;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    outline: none;
+}
+.notes-section textarea:focus {
+    border-color: #3a5a7a;
+}
+.day-files-section .file-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.day-files-section .file-list .file-tag {
+    background: #1a2230;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #7a8ba8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.day-files-section .file-list .file-tag .remove-file {
+    cursor: pointer;
+    color: #5a4a4a;
+    font-size: 14px;
+}
+.day-files-section .file-list .file-tag .remove-file:hover {
+    color: #d46a6a;
+}
+.upload-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+.upload-area button {
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid #2a3344;
+    background: transparent;
+    color: #aabbcc;
+    cursor: pointer;
+    font-size: 13px;
+}
+.upload-area button:hover {
+    background: #1f2a38;
+}
+/* Галерея */
+.gallery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.gallery-header h2 {
+    font-size: 20px;
+    font-weight: 400;
+}
+.gallery-header button {
+    padding: 6px 16px;
+    border-radius: 16px;
+    border: 1px solid #2a3344;
+    background: transparent;
+    color: #aabbcc;
+    cursor: pointer;
+}
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.gallery-grid .gallery-item {
+    aspect-ratio: 1;
+    background: #141a24;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid #1a2230;
+}
+.gallery-grid .gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.gallery-grid .gallery-item .placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #3a4a5a;
+    font-size: 12px;
+}
+/* Челленджи */
+.challenges-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.challenges-header h2 {
+    font-size: 20px;
+    font-weight: 400;
+}
+.challenges-header button {
+    padding: 6px 16px;
+    border-radius: 16px;
+    border: 1px solid #2a3344;
+    background: transparent;
+    color: #aabbcc;
+    cursor: pointer;
+}
+.challenge-item {
+    background: #141a24;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-left: 4px solid #2a3344;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.challenge-item .info {
+    flex: 1;
+}
+.challenge-item .info .name {
+    font-size: 16px;
+    font-weight: 500;
+}
+.challenge-item .info .meta {
+    font-size: 12px;
+    color: #5a6a7a;
+}
+.challenge-item .actions button {
+    background: none;
+    border: none;
+    color: #5a6a7a;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 6px;
+}
+.challenge-item .actions button:hover {
+    color: #8a9aaa;
+}
+/* Глобальный календарь */
+.year-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.year-header h2 {
+    font-size: 20px;
+    font-weight: 400;
+}
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+.filters span {
+    color: #5a6a7a;
+    font-size: 13px;
+    margin-right: 6px;
+}
+.filter-btn {
+    padding: 4px 14px;
+    border-radius: 16px;
+    border: 1px solid #2a3344;
+    background: transparent;
+    color: #7a8ba8;
+    cursor: pointer;
+    font-size: 12px;
+}
+.filter-btn.active {
+    background: #2a3a4a;
+    color: #e8edf5;
+    border-color: #3a5a7a;
+}
+.filter-btn:hover {
+    background: #1f2a38;
+}
+.year-calendar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+.year-month {
+    background: #141a24;
+    border-radius: 12px;
+    padding: 10px;
+    border: 1px solid #1a2230;
+}
+.year-month .month-name {
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    color: #aabbcc;
+    margin-bottom: 6px;
+}
+.year-month .month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+}
+.year-month .month-grid .day-cell {
+    aspect-ratio: 1;
+    font-size: 10px;
+    color: #5a6a7a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0b0e14;
+    border-radius: 4px;
+}
+.year-month .month-grid .day-cell.has-challenge {
+    background: #1a2230;
+    color: #aabbcc;
+}
+.year-month .month-grid .day-cell.event-day {
+    border: 1px solid #6a4a4a;
+}
+.year-month .challenge-bar {
+    height: 4px;
+    border-radius: 2px;
+    margin-top: 2px;
+}
+/* Модальное окно */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.modal-overlay.open {
+    display: flex;
+}
+.modal {
+    background: #141a24;
+    border-radius: 20px;
+    padding: 24px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid #1f2838;
+}
+.modal h3 {
+    font-size: 18px;
+    font-weight: 500;
+    margin-bottom: 16px;
+    color: #c8d5e5;
+}
+.modal label {
+    display: block;
+    font-size: 14px;
+    color: #7a8ba8;
+    margin-bottom: 4px;
+}
+.modal input, .modal select, .modal textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #1f2838;
+    background: #0b0e14;
+    color: #e8edf5;
+    font-size: 14px;
+    font-family: inherit;
+    margin-bottom: 12px;
+    outline: none;
+}
+.modal input:focus, .modal select:focus, .modal textarea:focus {
+    border-color: #3a5a7a;
+}
+.modal textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+.modal-actions .btn-primary {
+    background: #2a4a6a;
+    color: white;
+    padding: 8px 20px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+}
+.modal-actions .btn-secondary {
+    background: #1a2230;
+    color: #7a8ba8;
+    padding: 8px 20px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+}
+.modal-actions .btn-primary:hover {
+    background: #3a5a7a;
+}
+.modal-actions .btn-secondary:hover {
+    background: #2a3a4a;
+}
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a2a3a;
+    color: #e8edf5;
+    padding: 10px 24px;
+    border-radius: 30px;
+    font-size: 14px;
+    z-index: 300;
+    border: 1px solid #2a3a4a;
+    max-width: 90%;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.toast.error {
+    background: #3a1a1a;
+    border-color: #5a2a2a;
+}
+/* Адаптив */
+@media (max-width: 480px) {
+    .container { padding: 10px; }
+    .nav button { font-size: 10px; padding: 8px 4px; min-width: 40px; }
+    .calendar-grid .day-cell { font-size: 12px; min-height: 36px; border-radius: 6px; }
+    .calendar-grid .day-cell .day-number { font-size: 13px; }
+    .todo-item { padding: 8px 10px; gap: 6px; }
+    .todo-item .todo-text { font-size: 13px; }
+    .modal { padding: 16px; }
+    .year-calendar { grid-template-columns: repeat(2, 1fr); }
+    .gallery-grid { grid-template-columns: repeat(3, 1fr); }
+}
