@@ -1,47 +1,95 @@
-/* ========== КНОПКА ДОБАВИТЬ ЧЕЛЛЕНДЖ ========== */
-.add-challenge-btn {
-    background: #2a4a6a;
-    color: #e8edf5;
-    border: none;
-    border-radius: 12px;
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-.add-challenge-btn:hover {
-    background: #3a5a7a;
-}
-
-/* ========== ОБЛАСТЬ ПОД СЕТКОЙ ДНЕЙ ========== */
-.month-content {
+/* КАЛЕНДАРЬ — горизонтальная раскладка */
+#calendar {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    padding: 8px;
 }
 
-.challenge-bars-area {
+.month-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    align-items: stretch;
+    background: #141a24;
+    border-radius: 16px;
+    border: 1px solid #1f2838;
+    overflow: hidden;
+}
+
+.month-label {
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 15px;
+    color: #e8edf5;
+    background: #1a2230;
+    border-right: 1px solid #1f2838;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.month-label .year {
+    font-weight: 400;
+    font-size: 12px;
+    color: #7a8ba8;
+}
+
+.days-container {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.days-grid {
+    display: grid;
+    grid-template-columns: repeat(31, 1fr);
+    gap: 2px;
+    min-height: 40px;
+}
+
+.day-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: #aabbcc;
+    background: #0b0e14;
+    border-radius: 6px;
+    height: 34px;
+    transition: background 0.1s;
+}
+
+.day-cell.weekend {
+    color: #d46a6a;
+    font-weight: 600;
+}
+
+.day-cell.today {
+    background: #2a4a6a;
+    color: #e8edf5;
+    outline: 2px solid #3a5a7a;
+}
+
+.challenge-bars {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    min-height: 20px;
+    min-height: 30px;
 }
 
 .challenge-bar {
-    height: 28px;
-    border-radius: 14px;
+    height: 26px;
+    border-radius: 13px;
     display: flex;
     align-items: center;
-    padding: 0 12px;
-    font-size: 12px;
+    padding: 0 10px;
+    font-size: 11px;
     font-weight: 600;
     color: #0b0e14;
     cursor: pointer;
-    transition: opacity 0.15s, transform 0.1s;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    transition: transform 0.1s, opacity 0.15s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -52,114 +100,15 @@
     transform: scaleY(1.05);
 }
 
-.challenge-bar:active {
-    transform: scale(0.98);
-}
-
-.bar-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* ========== МОДАЛКА ЧЕЛЛЕНДЖА ========== */
-.challenge-modal-card {
-    max-width: 500px;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-
-.form-group {
-    margin-bottom: 16px;
-}
-
-.form-group label {
-    display: block;
-    font-size: 13px;
-    color: #7a8ba8;
-    margin-bottom: 6px;
-    font-weight: 500;
-}
-
-.form-group input[type="text"],
-.form-group input[type="number"],
-.form-group input[type="date"],
-.form-group textarea,
-.form-group select {
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: 10px;
-    border: 1px solid #1f2838;
-    background: #0b0e14;
-    color: #e8edf5;
-    font-size: 14px;
-    font-family: inherit;
-    outline: none;
-    transition: border-color 0.15s;
-}
-
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-    border-color: #3a5a7a;
-}
-
-.form-group textarea {
-    min-height: 80px;
-    resize: vertical;
-}
-
-.form-group input[type="color"] {
-    width: 60px;
-    height: 40px;
-    border: 1px solid #1f2838;
-    border-radius: 8px;
-    background: #0b0e14;
-    cursor: pointer;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-}
-
-.pace-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.pace-row input,
-.pace-row select {
-    flex: 1;
-}
-
-.checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: #7a8ba8;
-    margin-top: 6px;
-    cursor: pointer;
-}
-
-.checkbox-label input[type="checkbox"] {
-    width: auto;
-    cursor: pointer;
-}
-
-/* ========== АДАПТИВ ========== */
 @media (max-width: 768px) {
-    .form-row {
-        grid-template-columns: 1fr;
+    .month-row {
+        grid-template-columns: 100px 1fr;
     }
-    
-    .pace-row {
-        flex-direction: column;
+    .days-grid {
+        grid-template-columns: repeat(31, 28px);
     }
-    
-    .challenge-modal-card {
-        max-width: 95%;
+    .day-cell {
+        font-size: 10px;
+        height: 28px;
     }
 }
