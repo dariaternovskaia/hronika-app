@@ -40,7 +40,7 @@ function renderMonth(year, month) {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const offset = (firstDay === 0) ? 6 : firstDay - 1;
     
-    // Строим сетку дней
+    // ===== СТРОИМ СЕТКУ ДНЕЙ =====
     let gridHtml = '';
     for (let i = offset - 1; i >= 0; i--) {
         const day = new Date(year, month, 0).getDate() - i;
@@ -76,9 +76,7 @@ function renderMonth(year, month) {
         `;
     }
     
-    // ============================================================
-    // ПОЛОСЫ ЧЕЛЛЕНДЖЕЙ — ПОВЕРХ ДНЕЙ, КЛИКАБЕЛЬНЫ
-    // ============================================================
+    // ===== ПОЛОСЫ ЧЕЛЛЕНДЖЕЙ ПОВЕРХ ДНЕЙ =====
     const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
     const monthChallenges = APP.challenges.filter(ch => {
         const chStart = ch.startDate || '1970-01-01';
@@ -117,8 +115,6 @@ function renderMonth(year, month) {
         
         const left = ((startDay - 1) / daysInMonth * 100);
         const width = ((endDay - startDay + 1) / daysInMonth * 100);
-        
-        // Находим индекс челленджа в общем массиве, чтобы передать его в функцию
         const challengeIndex = APP.challenges.indexOf(ch);
         
         barsHtml += `
@@ -139,9 +135,7 @@ function renderMonth(year, month) {
         `;
     }
     
-    // ============================================================
-    // ЛЕГЕНДА ПОД МЕСЯЦЕМ
-    // ============================================================
+    // ===== ЛЕГЕНДА ПОД МЕСЯЦЕМ =====
     let legendHtml = '';
     if (uniqueChallenges.length > 0) {
         legendHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;padding:4px 0;border-top:1px solid #1a2230;">';
@@ -352,7 +346,7 @@ function closeDayModal() {
 }
 
 // ============================================================
-// ОСТАЛЬНЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ)
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================================
 
 function generateRecommendations(dateStr, activeChallenges) {
