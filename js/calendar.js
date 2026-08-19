@@ -1,549 +1,334 @@
 // ============================================================
-// КАЛЕНДАРЬ (ПОЛОСЫ ПРЯМО ПОД ЦИФРАМИ ДНЕЙ)
+// calendar.js — только календарь + полосы (не трогает другие разделы)
 // ============================================================
 
-let currentYear = new Date().getFullYear();
-let currentMonth = new Date().getMonth();
+(function() {
+    'use strict';
 
-function renderCalendar() {
-    const wrapper = document.getElementById('calendarWrapper');
-    let html = '<div class="calendar-scroll" id="calendarScroll">';
-    
-    const startYear = currentYear - 1;
-    const startMonth = currentMonth;
-    
-    for (let i = 0; i < 24; i++) {
-        const year = startYear + Math.floor((startMonth + i) / 12);
-        const month = (startMonth + i) % 12;
-        html += renderMonth(year, month);
+    // ---------- данные челленджей ----------
+    const challenges = [
+        {
+            id: 'ch1',
+            name: 'Английский каждый день',
+            description: '30 минут чтения + 10 новых слов',
+            start: { day: 3, month: 0, year: 2026 },
+            end:   { day: 25, month: 0, year: 2026 },
+            color: '#fde68a',
+            icon: '🇬🇧'
+        },
+        {
+            id: 'ch2',
+            name: 'Утренняя зарядка',
+            description: '15 минут растяжки',
+            start: { day: 10, month: 0, year: 2026 },
+            end:   { day: 28, month: 0, year: 2026 },
+            color: '#bbf7d0',
+            icon: '💪'
+        },
+        {
+            id: 'ch3',
+            name: 'Медитация',
+            description: '10 минут осознанности',
+            start: { day: 1, month: 1, year: 2026 },
+            end:   { day: 20, month: 1, year: 2026 },
+            color: '#c7d2fe',
+            icon: '🧘'
+        },
+        {
+            id: 'ch4',
+            name: 'Чтение книг',
+            description: '30 страниц в день',
+            start: { day: 5, month: 1, year: 2026 },
+            end:   { day: 26, month: 1, year: 2026 },
+            color: '#fecaca',
+            icon: '📚'
+        },
+        {
+            id: 'ch5',
+            name: 'Прогулка 10k шагов',
+            description: 'Ежедневная прогулка',
+            start: { day: 8, month: 2, year: 2026 },
+            end:   { day: 30, month: 2, year: 2026 },
+            color: '#fed7aa',
+            icon: '🚶'
+        },
+        {
+            id: 'ch6',
+            name: 'Испанский с нуля',
+            description: 'Duolingo + произношение',
+            start: { day: 1, month: 3, year: 2026 },
+            end:   { day: 18, month: 3, year: 2026 },
+            color: '#bae6fd',
+            icon: '🇪🇸'
+        }
+    ];
+
+    // ---------- вспомогательное ----------
+    function daysInMonth(m, y) {
+        return new Date(y, m + 1, 0).getDate();
     }
-    
-    html += '</div>';
-    wrapper.innerHTML = html;
-    
-    setTimeout(() => {
-        const scroll = document.getElementById('calendarScroll');
-        if (scroll) {
-            const currentMonthEl = scroll.querySelector(`[data-year="${new Date().getFullYear()}"][data-month="${new Date().getMonth()}"]`);
-            if (currentMonthEl) {
-                currentMonthEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+
+    function getFirstDayOfMonth(m, y) {
+        return new Date(y, m, 1).getDay();
+    }
+
+    const year = 2026;
+    const monthNames = [
+        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+    ];
+
+    // ---------- главная функция отрисовки ----------
+    function renderCalendar() {
+        const container = document.getElementById('calendar');
+        if (!container) return;
+
+        let html = '';
+
+        for (let m = 0; m < 12; m++) {
+            const totalDays = daysInMonth(m, year);
+            const firstDay = getFirstDayOfMonth(m, year);
+
+            html += `<div class="month-row" data-month="${m}" data-year="${year}">`;
+            html += `<div class="month-label">${monthNames[m]} <span class="year">${year}</span></div>`;
+            html += `<div class="days-wrapper" style="position:relative; padding: 8px 6px 8px 10px;">`;
+
+            // ---- сетка дней ----
+            html += `<div class="days-grid" id="daysGrid_${m}" style="display:grid; grid-template-columns: repeat(31, 34px); gap:2px; position:relative; min-height:64px;">`;
+            for (let d = 1; d <= totalDays; d++) {
+                const dateObj = new Date(year, m, d);
+                const dayOfWeek = dateObj.getDay();
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                const today = new Date();
+                const isToday = (today.getFullYear() === year && today.getMonth() === m && today.getDate() === d);
+                let cls = 'day-cell';
+                if (isWeekend) cls += ' weekend';
+                if (isToday) cls += ' today';
+                html += `<div class="${cls}" data-day="${d}" data-month="${m}">${d}</div>`;
             }
-        }
-    }, 100);
-}
+            html += `</div>`;
 
-function renderMonth(year, month) {
-    const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
-    
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const offset = (firstDay === 0) ? 6 : firstDay - 1;
-    
-    // ===== СТРОИМ СЕТКУ ДНЕЙ =====
-    let gridHtml = '';
-    
-    // Пустые ячейки до первого дня
-    for (let i = offset - 1; i >= 0; i--) {
-        const day = new Date(year, month, 0).getDate() - i;
-        gridHtml += `<div class="day-cell other-month"><span class="day-number">${day}</span></div>`;
+            // ---- слой для полос (поверх дней) ----
+            html += `<div class="challenge-layer" id="challengeLayer_${m}" style="position:absolute; top:8px; left:10px; right:6px; bottom:8px; pointer-events:none; z-index:5; overflow:visible;"></div>`;
+            html += `</div>`; // days-wrapper
+            html += `</div>`; // month-row
+        }
+
+        container.innerHTML = html;
+
+        // отрисовываем полосы после того, как DOM построен
+        renderChallenges();
     }
-    
-    // Дни месяца
-    for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const dayChallenges = APP.challenges.filter(ch => 
-            ch.startDate <= dateStr && (!ch.endDate || ch.endDate >= dateStr)
-        );
-        const isEvent = APP.events && APP.events.some(e => e.date === dateStr);
-        
-        const hasChallenge = dayChallenges.length > 0;
-        let cls = 'day-cell';
-        if (hasChallenge) cls += ' has-challenge';
-        if (isEvent) cls += ' event-day';
-        
-        // Точки под числом (показывают, какие челленджи активны)
-        let dots = '';
-        if (dayChallenges.length > 0) {
-            const colors = dayChallenges.map(ch => ch.color);
-            dots = colors.map(c => `<span class="challenge-dot" style="background:${c};"></span>`).join('');
-        }
-        if (isEvent) {
-            dots += '<span class="event-dot"></span>';
-        }
-        
-        gridHtml += `
-            <div class="${cls}" onclick="openDayModal('${dateStr}')" style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40px;padding:2px;">
-                <span class="day-number" style="font-size:14px;font-weight:500;z-index:3;position:relative;">${d}</span>
-                ${dots ? `<div style="display:flex;gap:2px;margin-top:2px;flex-wrap:wrap;justify-content:center;z-index:3;position:relative;">${dots}</div>` : ''}
-            </div>
-        `;
-    }
-    
-    // ============================================================
-    // ПОЛОСЫ ПРЯМО ПОД ЦИФРАМИ ДНЕЙ
-    // ============================================================
-    const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
-    const monthChallenges = APP.challenges.filter(ch => {
-        const chStart = ch.startDate || '1970-01-01';
-        const chEnd = ch.endDate || '2999-12-31';
-        const monthStart = `${year}-${String(month+1).padStart(2,'0')}-01`;
-        const monthEnd = `${year}-${String(month+1).padStart(2,'0')}-${daysInMonth}`;
-        return chStart <= monthEnd && chEnd >= monthStart;
-    });
-    
-    // Уникальные челленджи по имени
-    const uniqueChallenges = [];
-    const seen = new Set();
-    for (let ch of monthChallenges) {
-        const key = ch.name + ch.color;
-        if (!seen.has(key)) {
-            seen.add(key);
-            uniqueChallenges.push(ch);
-        }
-    }
-    
-    // Строим полосы поверх дней (под цифрами)
-    let overlayHtml = '';
-    for (let ch of uniqueChallenges) {
-        let startDay = 1;
-        let endDay = daysInMonth;
-        
-        if (ch.startDate && ch.startDate.slice(0,7) === monthStr) {
-            startDay = parseInt(ch.startDate.split('-')[2]) || 1;
-        }
-        if (ch.endDate && ch.endDate.slice(0,7) === monthStr) {
-            endDay = parseInt(ch.endDate.split('-')[2]) || daysInMonth;
-        }
-        if (ch.startDate && ch.startDate < monthStr + '-01' && (!ch.endDate || ch.endDate > monthStr + '-' + daysInMonth)) {
-            startDay = 1;
-            endDay = daysInMonth;
-        }
-        
-        // Перебираем дни, на которые приходится челлендж
-        for (let d = startDay; d <= endDay; d++) {
-            const dayIndex = offset + d - 1;
-            const row = Math.floor(dayIndex / 7);
-            const col = dayIndex % 7;
-            const totalRows = Math.ceil((offset + daysInMonth) / 7);
-            
-            // Позиция ячейки в процентах
-            const top = (row / totalRows * 100);
-            const left = (col / 7 * 100);
-            const width = (1 / 7 * 100);
-            const height = (1 / totalRows * 100);
-            
-            overlayHtml += `
-                <div class="challenge-bar-cell" style="
-                    position: absolute;
-                    top: ${top}%;
-                    left: ${left}%;
-                    width: ${width}%;
-                    height: ${height}%;
-                    background: ${ch.color};
-                    opacity: 0.25;
-                    z-index: 1;
-                    pointer-events: none;
-                    border-radius: 2px;
-                "></div>
-            `;
-        }
-    }
-    
-    // ===== ЛЕГЕНДА ПОД МЕСЯЦЕМ =====
-    let legendHtml = '';
-    if (uniqueChallenges.length > 0) {
-        legendHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;padding:4px 0;border-top:1px solid #1a2230;">';
-        for (let ch of uniqueChallenges) {
-            const challengeIndex = APP.challenges.indexOf(ch);
-            legendHtml += `
-                <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:#7a8ba8;cursor:pointer;" onclick="openChallengeModal(${challengeIndex})">
-                    <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${ch.color};"></span>
-                    ${ch.name.length > 20 ? ch.name.slice(0,20) + '…' : ch.name}
-                </span>
-            `;
-        }
-        legendHtml += '</div>';
-    }
-    
-    return `
-        <div class="calendar-month" data-year="${year}" data-month="${month}" style="position:relative;">
-            <div class="month-title">${monthNames[month]} ${year}</div>
-            <div class="month-grid" style="position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">
-                ${gridHtml}
-                ${overlayHtml}
-            </div>
-            ${legendHtml}
-        </div>
-    `;
-}
 
-// ============================================================
-// МОДАЛКА ЧЕЛЛЕНДЖА (ПО КЛИКУ НА ЛЕГЕНДУ)
-// ============================================================
+    // ---------- отрисовка полос (без перекрытия) ----------
+    function renderChallenges() {
+        for (let m = 0; m < 12; m++) {
+            const layer = document.getElementById(`challengeLayer_${m}`);
+            if (!layer) continue;
+            layer.innerHTML = '';
 
-function openChallengeModal(index) {
-    const ch = APP.challenges[index];
-    if (!ch) return;
-    
-    showModal('Челлендж', `
-        <div style="margin-bottom:12px;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                <span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:${ch.color};"></span>
-                <h3 style="font-size:18px;font-weight:500;color:#c8d5e5;margin:0;">${ch.name}</h3>
-            </div>
-            <div style="font-size:14px;color:#7a8ba8;">
-                <div>📅 ${ch.startDate || 'не указана'} — ${ch.endDate || 'бесконечно'}</div>
-                ${ch.tempo ? `<div>⏱ Темп: ${ch.tempo} ${ch.unit || 'уроков'}</div>` : ''}
-            </div>
-        </div>
-        <hr style="border-color:#1a2230;margin:12px 0;">
-        <label>Название</label>
-        <input type="text" id="editChallengeName" value="${ch.name}">
-        <label>Дата начала</label>
-        <input type="date" id="editChallengeStart" value="${ch.startDate || ''}">
-        <label>Дата окончания</label>
-        <input type="date" id="editChallengeEnd" value="${ch.endDate || ''}">
-        <label>Цвет</label>
-        <input type="color" id="editChallengeColor" value="${ch.color || '#e74c3c'}">
-        <label>Темп</label>
-        <input type="number" id="editChallengeTempo" value="${ch.tempo || ''}" placeholder="Количество за раз">
-        <label>Единица темпа</label>
-        <select id="editChallengeUnit">
-            <option value="уроков" ${ch.unit === 'уроков' ? 'selected' : ''}>уроков</option>
-            <option value="страниц" ${ch.unit === 'страниц' ? 'selected' : ''}>страниц</option>
-            <option value="лекций" ${ch.unit === 'лекций' ? 'selected' : ''}>лекций</option>
-        </select>
-        <div class="modal-actions" style="justify-content:space-between;">
-            <button class="btn-danger" onclick="deleteChallenge(${index})" style="background:#3a1a1a;color:#d46a6a;padding:8px 20px;border-radius:12px;border:none;cursor:pointer;">Удалить</button>
-            <div>
-                <button class="btn-secondary" onclick="closeModal()">Отмена</button>
-                <button class="btn-primary" onclick="confirmEditChallenge(${index})">Сохранить</button>
-            </div>
-        </div>
-    `);
-}
+            const grid = document.getElementById(`daysGrid_${m}`);
+            if (!grid) continue;
 
-function confirmEditChallenge(index) {
-    const name = document.getElementById('editChallengeName').value.trim();
-    if (!name) return showToast('Введите название', 'error');
-    APP.challenges[index] = {
-        name: name,
-        startDate: document.getElementById('editChallengeStart').value || '',
-        endDate: document.getElementById('editChallengeEnd').value || '',
-        color: document.getElementById('editChallengeColor').value || '#e74c3c',
-        tempo: document.getElementById('editChallengeTempo').value || '',
-        unit: document.getElementById('editChallengeUnit').value || 'уроков'
-    };
-    saveAppState();
-    closeModal();
-    renderCalendar();
-    showToast('Челлендж обновлён');
-}
+            const cells = grid.querySelectorAll('.day-cell');
+            if (cells.length === 0) continue;
 
-function deleteChallenge(index) {
-    if (!confirm('Удалить челлендж навсегда?')) return;
-    APP.challenges.splice(index, 1);
-    saveAppState();
-    closeModal();
-    renderCalendar();
-    showToast('Челлендж удалён');
-}
+            const layerRect = layer.getBoundingClientRect();
+            if (layerRect.width === 0) continue;
 
-// ============================================================
-// СТРАНИЧКА ДНЯ (ПО КЛИКУ НА ДЕНЬ)
-// ============================================================
+            const firstRect = cells[0].getBoundingClientRect();
+            const lastRect = cells[cells.length - 1].getBoundingClientRect();
+            const cellWidth = firstRect.width + 2;
+            const cellHeight = firstRect.height + 2;
+            const leftOffset = firstRect.left - layerRect.left;
+            const topOffset = firstRect.top - layerRect.top;
 
-function openDayModal(dateStr) {
-    const modal = document.getElementById('dayModal');
-    const title = document.getElementById('dayModalTitle');
-    const content = document.getElementById('dayModalContent');
-    
-    const parts = dateStr.split('-');
-    const day = parseInt(parts[2]);
-    const month = parseInt(parts[1]);
-    const year = parseInt(parts[0]);
-    const monthNames = ['Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
-        'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'];
-    title.textContent = `${day} ${monthNames[month-1]} ${year}`;
-    
-    if (!APP.dayData[dateStr]) {
-        APP.dayData[dateStr] = { todos: [], notes: '', dayFiles: [] };
-    }
-    const dayData = APP.dayData[dateStr];
-    
-    const activeChallenges = APP.challenges.filter(ch => 
-        ch.startDate <= dateStr && (!ch.endDate || ch.endDate >= dateStr)
-    );
-    
-    const recommendations = generateRecommendations(dateStr, activeChallenges);
-    
-    let html = `
-        <!-- Рекомендации -->
-        <div style="background:#1a2a2a;border-radius:12px;padding:12px;margin-bottom:16px;border:1px solid #2a4a4a;">
-            <h4 style="color:#6aaa7a;font-size:13px;margin-bottom:6px;">Рекомендации</h4>
-            ${recommendations.length > 0 ? 
-                recommendations.map(rec => `
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:14px;color:#aabbcc;">
-                        <span>${rec.text}</span>
-                        <button onclick="addRecommendedTodo('${dateStr}', '${rec.text}', '${rec.color}')" 
-                                style="background:#2a4a4a;border:none;color:#aabbcc;padding:2px 12px;border-radius:12px;cursor:pointer;font-size:12px;">
-                            + Добавить
-                        </button>
-                    </div>
-                `).join('') : 
-                '<div class="text-muted" style="font-size:13px;">Нет рекомендаций</div>'
-            }
-        </div>
-        
-        <!-- Дела -->
-        <div style="margin-bottom:16px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                <h4 style="color:#7a8ba8;font-size:14px;">Дела</h4>
-                <div style="display:flex;gap:6px;">
-                    <button onclick="addTodo('${dateStr}')" style="padding:4px 14px;border-radius:16px;border:1px solid #2a4a5a;background:transparent;color:#6a9aaa;cursor:pointer;font-size:12px;">+ Дело</button>
-                    <button onclick="addEvent('${dateStr}')" style="padding:4px 14px;border-radius:16px;border:1px solid #2a4a5a;background:transparent;color:#6a9aaa;cursor:pointer;font-size:12px;">+ Событие</button>
-                </div>
-            </div>
-            <div id="dayTodoList">
-                ${dayData.todos.length > 0 ? 
-                    dayData.todos.map((todo, i) => `
-                        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#10161e;border-radius:8px;margin-bottom:4px;border-left:3px solid ${todo.color || '#2a3344'};">
-                            <div onclick="toggleTodo('${dateStr}', ${i})" style="width:20px;height:20px;border-radius:6px;border:2px solid ${todo.done ? '#4a7a5a' : '#3a4a5a'};background:${todo.done ? '#1a3a2a' : 'transparent'};cursor:pointer;display:flex;align-items:center;justify-content:center;">
-                                ${todo.done ? '<span style="color:#6aaa7a;font-size:14px;">✓</span>' : ''}
-                            </div>
-                            <span style="flex:1;font-size:14px;${todo.done ? 'opacity:0.4;' : ''}">${todo.text}</span>
-                            <button onclick="deleteTodo('${dateStr}', ${i})" style="background:none;border:none;color:#5a4a4a;cursor:pointer;">✕</button>
-                        </div>
-                    `).join('') : 
-                    '<div class="text-muted" style="font-size:13px;">Нет дел</div>'
+            // ---- собираем все полосы для этого месяца ----
+            const barsForMonth = [];
+
+            challenges.forEach((ch) => {
+                const sM = ch.start.month, eM = ch.end.month;
+                if (m < sM || m > eM) return;
+
+                let sDay = (m === sM) ? ch.start.day : 1;
+                let eDay = (m === eM) ? ch.end.day : daysInMonth(m, year);
+                if (m > sM && m < eM) { sDay = 1; eDay = daysInMonth(m, year); }
+                if (m === sM && m === eM) { sDay = ch.start.day; eDay = ch.end.day; }
+
+                const firstIdx = sDay - 1;
+                const lastIdx = eDay - 1;
+                if (firstIdx < 0 || lastIdx >= cells.length) return;
+
+                const cellStart = cells[firstIdx];
+                const cellEnd = cells[lastIdx];
+                if (!cellStart || !cellEnd) return;
+
+                const startRect = cellStart.getBoundingClientRect();
+                const endRect = cellEnd.getBoundingClientRect();
+
+                const left = startRect.left - layerRect.left;
+                const width = (endRect.right - layerRect.left) - left;
+
+                barsForMonth.push({
+                    challenge: ch,
+                    left: left,
+                    width: width,
+                    top: topOffset,
+                    cellHeight: cellHeight,
+                    barHeight: Math.min(cellHeight * 0.75, 32)
+                });
+            });
+
+            // ---- сортируем по длине (короткие сверху) ----
+            barsForMonth.sort((a, b) => a.width - b.width);
+
+            // ---- размещаем без перекрытия (вертикальный стек) ----
+            const positions = [];
+            const barHeight = barsForMonth.length > 0 ? barsForMonth[0].barHeight : 20;
+            const gap = 2;
+
+            barsForMonth.forEach((barData) => {
+                let placed = false;
+                // пробуем найти свободную вертикальную позицию
+                for (let row = 0; row < 10; row++) {
+                    const y = topOffset + row * (barHeight + gap);
+                    // проверяем пересечение по X с уже размещёнными в этой строке
+                    let overlap = false;
+                    for (const placedBar of positions) {
+                        if (Math.abs(placedBar.row - row) > 0.5) continue;
+                        // проверяем пересечение по X
+                        const left1 = barData.left;
+                        const right1 = barData.left + barData.width;
+                        const left2 = placedBar.left;
+                        const right2 = placedBar.left + placedBar.width;
+                        if (left1 < right2 && right1 > left2) {
+                            overlap = true;
+                            break;
+                        }
+                    }
+                    if (!overlap) {
+                        positions.push({
+                            row: row,
+                            left: barData.left,
+                            width: barData.width,
+                            y: y
+                        });
+                        placed = true;
+                        break;
+                    }
                 }
-            </div>
-        </div>
-        
-        <!-- Заметки -->
-        <div style="margin-bottom:16px;">
-            <h4 style="color:#7a8ba8;font-size:14px;margin-bottom:4px;">Заметки</h4>
-            <textarea id="dayNotes" style="width:100%;min-height:80px;padding:10px 14px;border-radius:10px;border:1px solid #1f2838;background:#0b0e14;color:#e8edf5;font-size:14px;font-family:inherit;resize:vertical;outline:none;">${dayData.notes || ''}</textarea>
-        </div>
-        
-        <!-- Файлы -->
-        <div style="margin-bottom:16px;">
-            <h4 style="color:#7a8ba8;font-size:14px;margin-bottom:4px;">Файлы дня</h4>
-            <div id="dayFilesList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
-                ${dayData.dayFiles && dayData.dayFiles.length > 0 ? 
-                    dayData.dayFiles.map(f => `
-                        <span style="background:#1a2230;padding:4px 12px;border-radius:12px;font-size:12px;color:#7a8ba8;display:flex;align-items:center;gap:6px;">
-                            ${f}
-                            <span onclick="removeDayFile('${dateStr}', '${f}')" style="cursor:pointer;color:#5a4a4a;font-size:14px;">✕</span>
-                        </span>
-                    `).join('') : 
-                    '<span class="text-muted" style="font-size:13px;">Нет файлов</span>'
+                if (!placed) {
+                    // если не нашлось места — просто кладём в самую низкую свободную позицию
+                    const y = topOffset + positions.length * (barHeight + gap);
+                    positions.push({
+                        row: positions.length,
+                        left: barData.left,
+                        width: barData.width,
+                        y: y
+                    });
                 }
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button onclick="uploadDayFile('${dateStr}')" style="padding:6px 16px;border-radius:20px;border:1px solid #2a3344;background:transparent;color:#aabbcc;cursor:pointer;font-size:13px;">Загрузить файл</button>
-                <button onclick="uploadDayPhoto('${dateStr}')" style="padding:6px 16px;border-radius:20px;border:1px solid #2a3344;background:transparent;color:#aabbcc;cursor:pointer;font-size:13px;">Загрузить фото</button>
-            </div>
-        </div>
-        
-        <div class="modal-actions">
-            <button class="btn-secondary" onclick="saveDayData('${dateStr}')">Сохранить заметки</button>
-            <button class="btn-secondary" onclick="closeDayModal()">Закрыть</button>
-        </div>
-    `;
-    
-    content.innerHTML = html;
-    modal.classList.add('open');
-}
+            });
 
-function closeDayModal() {
-    document.getElementById('dayModal').classList.remove('open');
-}
+            // ---- рисуем полосы по вычисленным позициям ----
+            barsForMonth.forEach((barData, idx) => {
+                const pos = positions[idx];
+                if (!pos) return;
 
-// ============================================================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// ============================================================
+                const ch = barData.challenge;
+                const bar = document.createElement('div');
+                bar.className = 'challenge-bar';
+                bar.style.position = 'absolute';
+                bar.style.left = pos.left + 'px';
+                bar.style.top = pos.y + 'px';
+                bar.style.width = pos.width + 'px';
+                bar.style.height = barHeight + 'px';
+                bar.style.backgroundColor = ch.color || '#cbd5e1';
+                bar.style.opacity = '0.75';
+                bar.style.borderRadius = '20px';
+                bar.style.pointerEvents = 'auto';
+                bar.style.cursor = 'pointer';
+                bar.style.display = 'flex';
+                bar.style.alignItems = 'center';
+                bar.style.paddingLeft = '8px';
+                bar.style.fontSize = '10px';
+                bar.style.fontWeight = '600';
+                bar.style.color = '#0f172a';
+                bar.style.whiteSpace = 'nowrap';
+                bar.style.overflow = 'hidden';
+                bar.style.textOverflow = 'ellipsis';
+                bar.style.border = '1px solid rgba(255,255,255,0.2)';
+                bar.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
+                bar.style.zIndex = '10';
+                bar.style.transition = 'opacity 0.15s, transform 0.1s, box-shadow 0.15s';
 
-function generateRecommendations(dateStr, activeChallenges) {
-    const recommendations = [];
-    const monthStart = dateStr.slice(0, 7);
-    let doneCounts = {};
-    for (let date in APP.dayData) {
-        if (date.startsWith(monthStart)) {
-            for (let todo of APP.dayData[date].todos || []) {
-                if (todo.done && todo.challenge) {
-                    doneCounts[todo.challenge] = (doneCounts[todo.challenge] || 0) + 1;
-                }
-            }
-        }
-    }
-    
-    for (let ch of activeChallenges) {
-        const done = doneCounts[ch.name] || 0;
-        const tempo = parseInt(ch.tempo) || 1;
-        const unit = ch.unit || 'уроков';
-        const dayOfMonth = parseInt(dateStr.split('-')[2]);
-        const expected = Math.ceil(dayOfMonth / 30 * tempo * 30 / 30) || 1;
-        if (done < expected) {
-            recommendations.push({
-                text: `${ch.name}: сделать ${tempo} ${unit}`,
-                color: ch.color,
-                challenge: ch.name
+                bar.textContent = `${ch.icon || ''} ${ch.name}`;
+
+                bar.addEventListener('mouseenter', function() {
+                    this.style.opacity = '1';
+                    this.style.transform = 'scaleY(1.12)';
+                    this.style.boxShadow = '0 4px 14px rgba(0,0,0,0.15)';
+                    this.style.zIndex = '20';
+                });
+                bar.addEventListener('mouseleave', function() {
+                    this.style.opacity = '0.75';
+                    this.style.transform = 'scaleY(1)';
+                    this.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
+                    this.style.zIndex = '10';
+                });
+
+                bar.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    openModal(ch);
+                });
+
+                layer.appendChild(bar);
             });
         }
     }
-    return recommendations;
-}
 
-function addRecommendedTodo(dateStr, text, color) {
-    if (!APP.dayData[dateStr]) {
-        APP.dayData[dateStr] = { todos: [], notes: '', dayFiles: [] };
+    // ---------- модальное окно ----------
+    const modal = document.getElementById('modal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBadge = document.getElementById('modalBadge');
+    const modalDesc = document.getElementById('modalDesc');
+    const modalDates = document.getElementById('modalDates');
+    const modalClose = document.getElementById('modalCloseBtn');
+
+    function openModal(ch) {
+        if (!modal) return;
+        modalTitle.textContent = `${ch.icon || '🎯'} ${ch.name}`;
+        modalBadge.textContent = 'Челлендж';
+        modalDesc.textContent = ch.description || 'Нет описания';
+        const startStr = `${ch.start.day} ${monthNames[ch.start.month]}`;
+        const endStr = `${ch.end.day} ${monthNames[ch.end.month]}`;
+        modalDates.textContent = `с ${startStr} по ${endStr} ${ch.end.year}`;
+        modal.classList.add('active');
     }
-    APP.dayData[dateStr].todos.push({
-        text: text,
-        done: false,
-        color: color || '#2a3344',
-        challenge: text.split(':')[0] || null
+
+    if (modalClose) {
+        modalClose.addEventListener('click', function() {
+            modal.classList.remove('active');
+        });
+    }
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) modal.classList.remove('active');
+        });
+    }
+
+    // ---------- ресайз ----------
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            renderChallenges();
+        }, 200);
     });
-    saveAppState();
-    openDayModal(dateStr);
-    showToast('Дело добавлено');
-}
 
-function addTodo(dateStr) {
-    showModal('Добавить дело', `
-        <label>Текст дела</label>
-        <input type="text" id="newTodoText" placeholder="Что нужно сделать?" autofocus>
-        <label>Челлендж</label>
-        <select id="newTodoChallenge">
-            <option value="">—</option>
-            ${APP.challenges.map(ch => `<option value="${ch.name}" data-color="${ch.color || '#2a3344'}">${ch.name}</option>`).join('')}
-        </select>
-        <div class="modal-actions">
-            <button class="btn-secondary" onclick="closeModal()">Отмена</button>
-            <button class="btn-primary" onclick="confirmAddTodo('${dateStr}')">Добавить</button>
-        </div>
-    `);
-}
-
-function confirmAddTodo(dateStr) {
-    const text = document.getElementById('newTodoText').value.trim();
-    if (!text) return showToast('Введите текст', 'error');
-    const challengeName = document.getElementById('newTodoChallenge').value;
-    const challenge = APP.challenges.find(c => c.name === challengeName);
-    const color = challenge ? challenge.color : '#2a3344';
-    
-    if (!APP.dayData[dateStr]) {
-        APP.dayData[dateStr] = { todos: [], notes: '', dayFiles: [] };
+    // ---------- запуск ----------
+    document.addEventListener('DOMContentLoaded', renderCalendar);
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        renderCalendar();
     }
-    APP.dayData[dateStr].todos.push({
-        text: text,
-        done: false,
-        color: color,
-        challenge: challengeName || null
-    });
-    saveAppState();
-    closeModal();
-    openDayModal(dateStr);
-    showToast('Дело добавлено');
-}
 
-function addEvent(dateStr) {
-    showModal('Добавить событие', `
-        <label>Название события</label>
-        <input type="text" id="eventText" placeholder="Название события" autofocus>
-        <div class="modal-actions">
-            <button class="btn-secondary" onclick="closeModal()">Отмена</button>
-            <button class="btn-primary" onclick="confirmAddEvent('${dateStr}')">Добавить</button>
-        </div>
-    `);
-}
-
-function confirmAddEvent(dateStr) {
-    const text = document.getElementById('eventText').value.trim();
-    if (!text) return showToast('Введите название', 'error');
-    if (!APP.events) APP.events = [];
-    APP.events.push({ text: text, date: dateStr });
-    saveAppState();
-    closeModal();
-    openDayModal(dateStr);
-    showToast('Событие добавлено');
-}
-
-function toggleTodo(dateStr, index) {
-    if (!APP.dayData[dateStr]) return;
-    APP.dayData[dateStr].todos[index].done = !APP.dayData[dateStr].todos[index].done;
-    saveAppState();
-    openDayModal(dateStr);
-}
-
-function deleteTodo(dateStr, index) {
-    if (!confirm('Удалить дело?')) return;
-    APP.dayData[dateStr].todos.splice(index, 1);
-    saveAppState();
-    openDayModal(dateStr);
-    showToast('Дело удалено');
-}
-
-function saveDayData(dateStr) {
-    const notes = document.getElementById('dayNotes');
-    if (notes && APP.dayData[dateStr]) {
-        APP.dayData[dateStr].notes = notes.value;
-        saveAppState();
-        showToast('Заметки сохранены');
-    }
-}
-
-async function uploadDayFile(dateStr) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.onchange = async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const path = `Хроника/Календарь/${dateStr}/файлы_дня`;
-        await teraboxCreateFolder(path);
-        await teraboxUploadFile(path, file, { source: 'day', date: dateStr });
-        if (!APP.dayData[dateStr]) {
-            APP.dayData[dateStr] = { todos: [], notes: '', dayFiles: [] };
-        }
-        if (!APP.dayData[dateStr].dayFiles) APP.dayData[dateStr].dayFiles = [];
-        APP.dayData[dateStr].dayFiles.push(file.name);
-        saveAppState();
-        openDayModal(dateStr);
-        showToast('Файл загружен');
-    };
-    input.click();
-}
-
-async function uploadDayPhoto(dateStr) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = async function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const path = `Хроника/Фото`;
-        await teraboxCreateFolder(path);
-        const newName = `${dateStr}_${file.name}`;
-        const renamed = new File([file], newName, { type: file.type });
-        await teraboxUploadFile(path, renamed, { source: 'photo', date: dateStr });
-        if (!APP.dayData[dateStr]) {
-            APP.dayData[dateStr] = { todos: [], notes: '', dayFiles: [] };
-        }
-        if (!APP.dayData[dateStr].dayFiles) APP.dayData[dateStr].dayFiles = [];
-        APP.dayData[dateStr].dayFiles.push(newName);
-        saveAppState();
-        openDayModal(dateStr);
-        showToast('Фото загружено');
-    };
-    input.click();
-}
-
-function removeDayFile(dateStr, fileName) {
-    if (!confirm('Удалить файл?')) return;
-    APP.dayData[dateStr].dayFiles = APP.dayData[dateStr].dayFiles.filter(f => f !== fileName);
-    saveAppState();
-    openDayModal(dateStr);
-    showToast('Файл удалён');
-}
+})();
