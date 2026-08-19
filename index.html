@@ -3,87 +3,69 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Хроника — личный дневник</title>
-    
-    <!-- Подключаем стили -->
+    <title>Хроника</title>
     <link rel="stylesheet" href="css/style.css" />
-    
-    <!-- Шрифты и иконки -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
 </head>
 <body>
-
-    <div class="app-container">
-        <!-- ШАПКА -->
-        <header class="app-header">
+    <div id="app">
+        <!-- ШАПКА С НАВИГАЦИЕЙ (ВОТ ЭТИ ВАЖНЫЕ КНОПКИ!) -->
+        <header class="header">
             <h1>📅 Хроника</h1>
-            <div class="header-actions">
-                <button class="icon-btn" id="todayBtn" title="Сегодня">📌</button>
-                <button class="icon-btn" id="settingsBtn" title="Настройки">⚙️</button>
-            </div>
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-section="calendar">📆 Календарь</button>
+                <button class="nav-tab" data-section="study">📚 Учебные материалы</button>
+                <button class="nav-tab" data-section="photo">📸 Фото</button>
+                <button class="nav-tab" data-section="reader">📖 Читательский дневник</button>
+                <button class="nav-tab" data-section="cinema">🎬 Кинодневник</button>
+                <button class="nav-tab" data-section="exit">🚪 Выход</button>
+            </nav>
         </header>
 
-        <!-- ОСНОВНАЯ СЕТКА -->
-        <div class="main-grid">
-            
-            <!-- ЛЕВАЯ КОЛОНКА: КАЛЕНДАРЬ -->
-            <section class="calendar-section">
-                <div class="section-header">
-                    <h2>Календарь</h2>
-                    <div class="month-nav">
-                        <button class="nav-btn" id="prevMonth">←</button>
-                        <span id="currentMonthLabel">Январь 2026</span>
-                        <button class="nav-btn" id="nextMonth">→</button>
-                    </div>
-                </div>
-                <div id="calendar" class="calendar-table">
-                    <!-- сюда рендерится календарь через calendar.js -->
-                </div>
+        <!-- КОНТЕЙНЕРЫ ДЛЯ РАЗДЕЛОВ -->
+        <main class="main-content">
+            <section id="section-calendar" class="section active">
+                <div id="calendar"></div>
             </section>
-
-            <!-- ПРАВАЯ КОЛОНКА: ДНЕВНИК И ДЕЛА -->
-            <aside class="sidebar">
-                <!-- Блок ДНЕВНИК -->
-                <section class="diary-section">
-                    <div class="section-header">
-                        <h2>📖 Дневник</h2>
-                        <button class="add-btn" id="addDiaryBtn">+</button>
-                    </div>
-                    <div id="diaryList" class="diary-list">
-                        <!-- сюда рендерится список дневников через diary.js -->
-                    </div>
-                </section>
-
-                <!-- Блок УЧЁБА -->
-                <section class="study-section">
-                    <div class="section-header">
-                        <h2>📚 Учёба</h2>
-                        <button class="add-btn" id="addStudyBtn">+</button>
-                    </div>
-                    <div id="studyList" class="study-list">
-                        <!-- сюда рендерится список задач через study.js -->
-                    </div>
-                </section>
-            </aside>
-        </div>
+            <section id="section-study" class="section">
+                <h2>📚 Учебные материалы</h2>
+                <div id="studyContent"></div>
+            </section>
+            <section id="section-photo" class="section">
+                <h2>📸 Фото</h2>
+                <div id="photoContent"></div>
+            </section>
+            <section id="section-reader" class="section">
+                <h2>📖 Читательский дневник</h2>
+                <div id="readerContent"></div>
+            </section>
+            <section id="section-cinema" class="section">
+                <h2>🎬 Кинодневник</h2>
+                <div id="cinemaContent"></div>
+            </section>
+            <section id="section-exit" class="section">
+                <h2>🚪 Выход</h2>
+                <p>Вы вышли из приложения</p>
+            </section>
+        </main>
     </div>
 
-    <!-- МОДАЛЬНОЕ ОКНО (для челленджей) -->
+    <!-- МОДАЛКА -->
     <div id="modal" class="modal-overlay">
         <div class="modal-card">
             <h2 id="modalTitle">Челлендж</h2>
             <span class="badge" id="modalBadge">🎯</span>
             <p id="modalDesc">Описание</p>
-            <div class="dates" id="modalDates">с 1 января по 15 января</div>
+            <div class="dates" id="modalDates"></div>
             <button class="modal-close" id="modalCloseBtn">Закрыть</button>
         </div>
     </div>
 
-    <!-- ПОДКЛЮЧАЕМ СКРИПТЫ (в правильном порядке) -->
     <script src="js/calendar.js"></script>
-    <script src="js/diary.js"></script>
+    <script src="js/navigation.js"></script>
     <script src="js/study.js"></script>
+    <script src="js/photo.js"></script>
+    <script src="js/reader.js"></script>
+    <script src="js/cinema.js"></script>
 </body>
 </html>
