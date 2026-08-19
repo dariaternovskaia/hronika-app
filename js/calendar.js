@@ -1,19 +1,26 @@
 // ========== ДАННЫЕ ЧЕЛЛЕНДЖЕЙ ==========
 let challenges = JSON.parse(localStorage.getItem('hronika_challenges') || '[]');
 
-// Миграция старых данных
+// Миграция старых данных + сохранение
+let needsSave = false;
 challenges = challenges.map(ch => {
     if (!ch.content) {
         ch.content = { amount: 0, unit: 'pages', customUnit: '', note: '' };
+        needsSave = true;
     }
     if (!ch.norm) {
         ch.norm = { amount: 0, unit: 'pages' };
+        needsSave = true;
     }
     if (!ch.frequency) {
         ch.frequency = { type: 'daily', days: [] };
+        needsSave = true;
     }
     return ch;
 });
+if (needsSave) {
+    localStorage.setItem('hronika_challenges', JSON.stringify(challenges));
+}
 
 if (challenges.length === 0) {
     challenges = [
@@ -155,7 +162,12 @@ function renderCalendar() {
     const addBtn = document.getElementById('addChallengeBtn');
     if (addBtn) addBtn.addEventListener('click', () => openChallengeModal());
 
-    renderChallengeBars();
+    // Ждём отрисовки DOM перед расчётом размеров
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            renderChallengeBars();
+        });
+    });
 }
 
 // ========== ОТРИСОВКА ПОЛОСОК ==========
@@ -176,6 +188,10 @@ function renderChallengeBars() {
         const firstCell = dayCells[0];
         const cellRect = firstCell.getBoundingClientRect();
         const cellWidth = cellRect.width;
+        
+        // Если ширина 0 — элемент не отрисован, пропускаем
+        if (cellWidth === 0) continue;
+        
         const gap = 2;
         const cellStep = cellWidth + gap;
         const gridWidth = totalDays * cellWidth + (totalDays - 1) * gap;
@@ -187,6 +203,8 @@ function renderChallengeBars() {
 
         const monthChallenges = [];
         challenges.forEach(ch => {
+            if (!ch.startDate || !ch.endDate) return;
+            
             const sM = ch.startDate.month;
             const eM = ch.endDate ? ch.endDate.month : 11;
 
