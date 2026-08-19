@@ -9,54 +9,60 @@
 </head>
 <body>
     <div id="app">
-        <!-- ШАПКА С НАВИГАЦИЕЙ (ТОЛЬКО ВЕРХ) -->
-        <header class="header">
-            <h1>Хроника</h1>
-            <nav class="nav-tabs">
-                <button class="nav-tab active" data-section="calendar">Календарь</button>
-                <button class="nav-tab" data-section="study">Учебные материалы</button>
-                <button class="nav-tab" data-section="photo">Фото</button>
-                <button class="nav-tab" data-section="reader">Читательский дневник</button>
-                <button class="nav-tab" data-section="cinema">Кинодневник</button>
-                <button class="nav-tab" data-section="exit">Выход</button>
+        <!-- ШАПКА С НАВИГАЦИЕЙ (исправлено под реальный app.js) -->
+        <div class="container">
+            <h1 style="text-align: center; margin-bottom: 16px; font-weight: 300; letter-spacing: 2px; color: #7a8ba8;">Хроника</h1>
+            <nav class="nav">
+                <button class="active" data-screen="calendar">Календарь</button>
+                <button data-screen="studies">Учебные материалы</button>
+                <button data-screen="gallery">Фото</button>
+                <button data-screen="books">Читательский дневник</button>
+                <button data-screen="movies">Кинодневник</button>
+                <button data-screen="logout">Выход</button>
             </nav>
-        </header>
+        </div>
 
-        <!-- КОНТЕЙНЕРЫ ДЛЯ РАЗДЕЛОВ -->
-        <main class="main-content">
-            <!-- КАЛЕНДАРЬ (ОН ЕСТЬ, Я НЕ УБИРАЛ) -->
-            <section id="section-calendar" class="section active">
+        <!-- КОНТЕЙНЕРЫ ДЛЯ РАЗДЕЛОВ (ID должны совпадать с логикой app.js) -->
+        <main class="container">
+            <section id="screenCalendar" class="screen active">
                 <div id="calendar"></div>
             </section>
 
-            <section id="section-study" class="section">
-                <h2>Учебные материалы</h2>
-                <div id="studyContent"></div>
+            <section id="screenStudies" class="screen">
+                <div class="studies-header">
+                    <h2>Учебные материалы</h2>
+                </div>
+                <div id="studyContent" class="studies-content"></div>
             </section>
 
-            <section id="section-photo" class="section">
-                <h2>Фото</h2>
-                <div id="photoContent"></div>
+            <section id="screenGallery" class="screen">
+                <div class="gallery-header">
+                    <h2>Фото</h2>
+                </div>
+                <div id="photoContent" class="gallery-grid"></div>
             </section>
 
-            <section id="section-reader" class="section">
-                <h2>Читательский дневник</h2>
-                <div id="readerContent"></div>
+            <section id="screenBooks" class="screen">
+                <div class="diary-header">
+                    <h2>Читательский дневник</h2>
+                </div>
+                <div id="readerContent" class="diary-list"></div>
             </section>
 
-            <section id="section-cinema" class="section">
-                <h2>Кинодневник</h2>
-                <div id="cinemaContent"></div>
+            <section id="screenMovies" class="screen">
+                <div class="diary-header">
+                    <h2>Кинодневник</h2>
+                </div>
+                <div id="cinemaContent" class="diary-list"></div>
             </section>
 
-            <section id="section-exit" class="section">
-                <h2>Выход</h2>
-                <p>Вы вышли из приложения</p>
+            <section id="screenLogout" class="screen">
+                <h2 style="text-align: center; color: #7a8ba8; margin-top: 40px;">Вы вышли из приложения</h2>
             </section>
         </main>
     </div>
 
-    <!-- МОДАЛКА -->
+    <!-- МОДАЛКА ДЛЯ ЧЕЛЛЕНДЖЕЙ -->
     <div id="modal" class="modal-overlay">
         <div class="modal-card">
             <h2 id="modalTitle">Челлендж</h2>
@@ -67,12 +73,13 @@
         </div>
     </div>
 
-    <!-- ПОДКЛЮЧАЕМ СКРИПТЫ -->
+    <!-- ПОДКЛЮЧАЕМ СКРИПТЫ (реальные имена файлов из твоего репозитория) -->
+    <script src="js/app.js"></script>
     <script src="js/calendar.js"></script>
-    <script src="js/navigation.js"></script>
-    <script src="js/study.js"></script>
-    <script src="js/photo.js"></script>
-    <script src="js/reader.js"></script>
-    <script src="js/cinema.js"></script>
+    <script src="js/studies.js"></script>
+    <script src="js/gallery.js"></script>
+    <script src="js/books.js"></script>
+    <script src="js/movies.js"></script>
+    <script src="js/terabox.js"></script>
 </body>
 </html>
