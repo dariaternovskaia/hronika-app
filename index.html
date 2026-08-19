@@ -1,108 +1,628 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Хроника жизни</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Годовой календарь челленджей</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            padding: 30px 20px;
+        }
+        .container {
+            max-width: 1400px;
+            width: 100%;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+            padding: 24px 20px 32px;
+        }
+        h1 {
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #1e293b;
+            letter-spacing: -0.3px;
+        }
+        .subhead {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #e9edf2;
+            padding-bottom: 16px;
+        }
+        /* ---------- таблица ---------- */
+        .calendar-table {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .month-row {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            align-items: stretch;
+            background: #fafbfc;
+            border-radius: 16px;
+            transition: background 0.15s;
+            position: relative;
+        }
+        .month-row:hover {
+            background: #f1f5f9;
+        }
+        /* левая колонка с названием месяца */
+        .month-label {
+            padding: 12px 8px 12px 16px;
+            font-weight: 600;
+            font-size: 15px;
+            color: #0f172a;
+            background: #f1f5f9;
+            border-radius: 16px 0 0 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1.3;
+            border-right: 1px solid #e2e8f0;
+            min-height: 70px;
+        }
+        .month-label .year {
+            font-weight: 400;
+            font-size: 12px;
+            color: #64748b;
+        }
+        /* правая часть — дни + полосы */
+        .days-wrapper {
+            position: relative;
+            padding: 8px 6px 8px 10px;
+            overflow-x: auto;
+            overflow-y: visible;
+        }
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(31, 34px);
+            gap: 2px;
+            position: relative;
+            min-height: 64px;
+        }
+        .day-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1e293b;
+            background: transparent;
+            border-radius: 6px;
+            height: 34px;
+            width: 34px;
+            transition: background 0.1s;
+            user-select: none;
+            position: relative;
+            z-index: 2;
+            background: rgba(255, 255, 255, 0.3);
+        }
+        /* выходные и пустые ячейки */
+        .day-cell.weekend {
+            color: #b91c1c;
+            font-weight: 600;
+        }
+        .day-cell.empty {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        .day-cell.today {
+            outline: 2px solid #2563eb;
+            outline-offset: -2px;
+            border-radius: 6px;
+        }
+        /* ---------- ПОЛОСКИ ЧЕЛЛЕНДЖЕЙ ---------- */
+        .challenge-layer {
+            position: absolute;
+            top: 8px;
+            left: 10px;
+            right: 6px;
+            bottom: 8px;
+            pointer-events: none; /* клик идёт сквозь слой, но полоски сами ловят клик */
+            z-index: 5;
+            overflow: visible;
+        }
+        .challenge-bar {
+            position: absolute;
+            height: 28px;
+            border-radius: 20px;
+            opacity: 0.75;
+            pointer-events: auto;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            padding-right: 6px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            letter-spacing: 0.2px;
+            z-index: 10;
+        }
+        .challenge-bar:hover {
+            opacity: 1;
+            transform: scaleY(1.12);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+            z-index: 20;
+        }
+        .challenge-bar:active {
+            transform: scale(0.97);
+        }
+        /* цвета для разных челленджей (будут заданы в JS) */
+        .challenge-bar .bar-label {
+            pointer-events: none;
+            text-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
+        }
+
+        /* ---------- Модалка ---------- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(3px);
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+        .modal-overlay.active {
+            display: flex;
+        }
+        .modal-card {
+            background: white;
+            border-radius: 28px;
+            padding: 32px 38px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            animation: pop 0.2s ease-out;
+        }
+        @keyframes pop {
+            0% { transform: scale(0.94); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .modal-card h2 {
+            font-size: 22px;
+            margin-bottom: 8px;
+            color: #0f172a;
+        }
+        .modal-card .badge {
+            display: inline-block;
+            background: #eef2ff;
+            color: #1e4bd2;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 14px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+        }
+        .modal-card p {
+            color: #334155;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+        .modal-card .dates {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 10px;
+            background: #f8fafc;
+            padding: 10px 14px;
+            border-radius: 12px;
+        }
+        .modal-close {
+            margin-top: 20px;
+            background: #0f172a;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 10px 24px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .modal-close:hover {
+            background: #1e293b;
+        }
+
+        /* ---------- адаптив ---------- */
+        @media (max-width: 700px) {
+            .month-row {
+                grid-template-columns: 80px 1fr;
+                border-radius: 12px;
+            }
+            .month-label {
+                padding: 10px 6px 10px 10px;
+                font-size: 13px;
+                min-height: 56px;
+            }
+            .days-grid {
+                grid-template-columns: repeat(31, 24px);
+                gap: 1px;
+            }
+            .day-cell {
+                height: 24px;
+                width: 24px;
+                font-size: 10px;
+            }
+            .challenge-bar {
+                height: 20px;
+                font-size: 7px;
+                border-radius: 12px;
+                padding-left: 4px;
+            }
+            .challenge-layer {
+                top: 6px;
+                left: 6px;
+                right: 4px;
+                bottom: 6px;
+            }
+            .container {
+                padding: 12px 8px;
+            }
+        }
+        @media (max-width: 480px) {
+            .days-grid {
+                grid-template-columns: repeat(31, 18px);
+                gap: 1px;
+            }
+            .day-cell {
+                height: 18px;
+                width: 18px;
+                font-size: 8px;
+            }
+            .challenge-bar {
+                height: 14px;
+                font-size: 6px;
+                border-radius: 8px;
+                padding-left: 2px;
+            }
+            .month-label {
+                font-size: 11px;
+                min-height: 40px;
+                padding: 6px 4px 6px 6px;
+            }
+        }
+    </style>
 </head>
 <body>
-    <!-- Экран входа -->
-    <div id="loginScreen" class="login-screen">
-        <h1>Хроника</h1>
-        <p class="subtitle">Войдите в TeraBox для синхронизации</p>
-        <input type="text" id="loginEmail" placeholder="Email или телефон">
-        <input type="password" id="loginPassword" placeholder="Пароль">
-        <button id="loginBtn">Войти</button>
-        <div id="loginError" class="error"></div>
-        <div class="hint">Данные сохраняются в TeraBox, а не в браузере</div>
+
+<div class="container">
+    <h1>📅 Годовой календарь</h1>
+    <div class="subhead">Челленджи — кликабельные полосы поверх дней</div>
+
+    <div id="calendar" class="calendar-table"></div>
+</div>
+
+<!-- Модальное окно -->
+<div id="modal" class="modal-overlay">
+    <div class="modal-card">
+        <h2 id="modalTitle">Челлендж</h2>
+        <span class="badge" id="modalBadge">🎯</span>
+        <p id="modalDesc">Описание</p>
+        <div class="dates" id="modalDates">с 1 января по 15 января</div>
+        <button class="modal-close" id="modalCloseBtn">Закрыть</button>
     </div>
+</div>
 
-    <!-- Основное приложение -->
-    <div id="appScreen" style="display:none;">
-        <div class="container">
-            <!-- Навигация -->
-            <nav class="nav" id="mainNav">
-                <button class="active" data-screen="calendar">Календарь</button>
-                <button data-screen="studies">Учебные материалы</button>
-                <button data-screen="gallery">Фото</button>
-                <button data-screen="books">Читательский дневник</button>
-                <button data-screen="movies">Кинодневник</button>
-                <button data-screen="logout" id="logoutBtn">Выход</button>
-            </nav>
+<script>
+    (function() {
+        // ------------------------------------------------------------
+        // 1. ДАННЫЕ ЧЕЛЛЕНДЖЕЙ
+        //    start/end — номер дня (1–31), месяц (0-11), год (2026)
+        // ------------------------------------------------------------
+        const challenges = [
+            {
+                id: 'ch1',
+                name: 'Английский каждый день',
+                description: '30 минут чтения + 10 новых слов',
+                start: { day: 3, month: 0, year: 2026 },
+                end:   { day: 25, month: 0, year: 2026 },
+                color: '#fde68a', // жёлтый
+                icon: '🇬🇧'
+            },
+            {
+                id: 'ch2',
+                name: 'Утренняя зарядка',
+                description: '15 минут растяжки и упражнений',
+                start: { day: 10, month: 0, year: 2026 },
+                end:   { day: 28, month: 0, year: 2026 },
+                color: '#bbf7d0', // зелёный
+                icon: '💪'
+            },
+            {
+                id: 'ch3',
+                name: 'Медитация',
+                description: '10 минут осознанности',
+                start: { day: 1, month: 1, year: 2026 },
+                end:   { day: 20, month: 1, year: 2026 },
+                color: '#c7d2fe', // сиреневый
+                icon: '🧘'
+            },
+            {
+                id: 'ch4',
+                name: 'Чтение книг',
+                description: '30 страниц в день',
+                start: { day: 5, month: 1, year: 2026 },
+                end:   { day: 26, month: 1, year: 2026 },
+                color: '#fecaca', // красноватый
+                icon: '📚'
+            },
+            {
+                id: 'ch5',
+                name: 'Прогулка 10k шагов',
+                description: 'Ежедневная прогулка на свежем воздухе',
+                start: { day: 8, month: 2, year: 2026 },
+                end:   { day: 30, month: 2, year: 2026 },
+                color: '#fed7aa', // оранжевый
+                icon: '🚶'
+            },
+            {
+                id: 'ch6',
+                name: 'Испанский с нуля',
+                description: 'Duolingo + 5 минут на произношение',
+                start: { day: 1, month: 3, year: 2026 },
+                end:   { day: 18, month: 3, year: 2026 },
+                color: '#bae6fd', // голубой
+                icon: '🇪🇸'
+            }
+        ];
 
-            <!-- Календарь -->
-            <div id="screenCalendar" class="screen active">
-                <div class="calendar-wrapper" id="calendarWrapper"></div>
-            </div>
+        // ------------------------------------------------------------
+        // 2. ГЕНЕРАЦИЯ КАЛЕНДАРЯ
+        // ------------------------------------------------------------
+        const year = 2026;
+        const months = [
+            'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+            'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+        ];
 
-            <!-- Учебные материалы -->
-            <div id="screenStudies" class="screen">
-                <div class="studies-header">
-                    <h2>Учебные материалы</h2>
-                    <div class="studies-nav">
-                        <button class="active" data-study="matematika">Математика</button>
-                        <button data-study="filosofiya">Философия</button>
-                        <button data-study="yazyki">Языкознание</button>
-                    </div>
-                </div>
-                <div id="studiesContent" class="studies-content"></div>
-            </div>
+        const calendarEl = document.getElementById('calendar');
 
-            <!-- Галерея фото -->
-            <div id="screenGallery" class="screen">
-                <div class="gallery-header">
-                    <h2>Фото</h2>
-                    <button id="addPhotoBtn">+ Добавить</button>
-                </div>
-                <div id="galleryGrid" class="gallery-grid"></div>
-            </div>
+        // Определяем, сколько дней в месяце
+        function daysInMonth(m, y) {
+            return new Date(y, m + 1, 0).getDate();
+        }
 
-            <!-- Читательский дневник -->
-            <div id="screenBooks" class="screen">
-                <div class="diary-header">
-                    <h2>Читательский дневник</h2>
-                    <button id="addBookBtn">+ Добавить</button>
-                </div>
-                <div id="booksDiary" class="diary-list"></div>
-            </div>
+        // День недели (0 = вс, 1 = пн …)
+        function getFirstDayOfMonth(m, y) {
+            return new Date(y, m, 1).getDay();
+        }
 
-            <!-- Кинодневник -->
-            <div id="screenMovies" class="screen">
-                <div class="diary-header">
-                    <h2>Кинодневник</h2>
-                    <button id="addMovieBtn">+ Добавить</button>
-                </div>
-                <div id="moviesDiary" class="diary-list"></div>
-            </div>
-        </div>
-    </div>
+        // ------------------ сборка строк ------------------
+        function buildCalendar() {
+            let html = '';
 
-    <!-- ===== МОДАЛКА ДНЯ (СТРАНИЧКА ДНЯ) ===== -->
-    <div id="dayModal" class="modal-overlay">
-        <div class="modal" style="max-width:700px;">
-            <div class="modal-header">
-                <h3 id="dayModalTitle">18 августа 2026</h3>
-                <button class="close-btn" onclick="closeDayModal()">✕</button>
-            </div>
-            <div id="dayModalContent">
-                <!-- Заполняется из calendar.js -->
-            </div>
-        </div>
-    </div>
+            for (let m = 0; m < 12; m++) {
+                const totalDays = daysInMonth(m, year);
+                const firstDay = getFirstDayOfMonth(m, year); // 0=вс
 
-    <!-- Модальное окно (общее) -->
-    <div id="modalOverlay" class="modal-overlay">
-        <div class="modal" id="modalContent"></div>
-    </div>
+                html += `<div class="month-row" data-month="${m}" data-year="${year}">`;
+                // левая колонка
+                html += `<div class="month-label">${months[m]} <span class="year">${year}</span></div>`;
 
-    <script src="js/terabox.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/calendar.js"></script>
-    <script src="js/studies.js"></script>
-    <script src="js/gallery.js"></script>
-    <script src="js/books.js"></script>
-    <script src="js/movies.js"></script>
+                // правая: обёртка для позиционирования полос
+                html += `<div class="days-wrapper" style="position:relative;">`;
+                html += `<div class="days-grid" id="daysGrid_${m}">`;
+
+                // пустые ячейки до первого дня (если месяц начинается не с пн)
+                // но мы хотим всегда показывать дни с 1 по 31, пустые ячейки не нужны
+                // просто рисуем 1..totalDays
+                for (let d = 1; d <= totalDays; d++) {
+                    const dateObj = new Date(year, m, d);
+                    const dayOfWeek = dateObj.getDay(); // 0=вс, 6=сб
+                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                    // сегодня?
+                    const today = new Date();
+                    const isToday = (today.getFullYear() === year && today.getMonth() === m && today.getDate() === d);
+                    let cls = 'day-cell';
+                    if (isWeekend) cls += ' weekend';
+                    if (isToday) cls += ' today';
+                    html += `<div class="${cls}" data-day="${d}" data-month="${m}">${d}</div>`;
+                }
+
+                html += `</div>`; // close days-grid
+
+                // слой для полос (позиционируется абсолютно поверх days-grid)
+                html += `<div class="challenge-layer" id="challengeLayer_${m}">`;
+                // полоски будут вставлены через JS, чтобы точно рассчитать позиции
+                html += `</div>`;
+
+                html += `</div>`; // close days-wrapper
+                html += `</div>`; // close month-row
+            }
+
+            calendarEl.innerHTML = html;
+
+            // теперь добавляем полоски
+            renderChallenges();
+        }
+
+        // ------------------------------------------------------------
+        // 3. ОТРИСОВКА ПОЛОСОК
+        // ------------------------------------------------------------
+        function renderChallenges() {
+            // Для каждого месяца — берём его слой и grid
+            for (let m = 0; m < 12; m++) {
+                const layer = document.getElementById(`challengeLayer_${m}`);
+                if (!layer) continue;
+                // очищаем слой
+                layer.innerHTML = '';
+
+                const grid = document.getElementById(`daysGrid_${m}`);
+                if (!grid) continue;
+
+                // получаем все ячейки дней (только числа)
+                const cells = grid.querySelectorAll('.day-cell');
+                if (cells.length === 0) continue;
+
+                // координаты первой и последней ячейки
+                const firstCell = cells[0];
+                const lastCell = cells[cells.length - 1];
+                const gridRect = grid.getBoundingClientRect();
+                // но мы работаем в абсолютных позициях внутри layer, который совпадает с days-wrapper
+                // проще использовать offsetLeft/offsetTop относительно days-wrapper
+                // однако layer и grid находятся внутри days-wrapper
+                // получим bounding rect относительно layer
+                // поскольку layer.position = absolute, top=0 left=0 внутри days-wrapper
+                // но нам нужно знать смещение первой ячейки от края layer
+                // можно использовать getBoundingClientRect и вычислить
+                const layerRect = layer.getBoundingClientRect();
+                if (layerRect.width === 0) continue;
+
+                // вычислим смещение первой ячейки относительно layer
+                const firstRect = firstCell.getBoundingClientRect();
+                const lastRect = lastCell.getBoundingClientRect();
+                const cellWidth = firstRect.width + 2; // ширина + gap
+                const cellHeight = firstRect.height + 2; // высота + gap
+
+                // отступ слева у первой ячейки
+                const leftOffset = firstRect.left - layerRect.left;
+                const topOffset = firstRect.top - layerRect.top;
+
+                // теперь для каждого челленджа, который пересекается с этим месяцем
+                challenges.forEach((ch, idx) => {
+                    const startDay = ch.start.day;
+                    const endDay = ch.end.day;
+                    const startMonth = ch.start.month;
+                    const endMonth = ch.end.month;
+                    const startYear = ch.start.year;
+                    const endYear = ch.end.year;
+
+                    // проверяем, пересекается ли челлендж с текущим месяцем m
+                    if (m < startMonth && m < endMonth) return;
+                    if (m > startMonth && m > endMonth) return;
+                    if (m < startMonth || m > endMonth) {
+                        // если месяц вне диапазона
+                        // но если челлендж переходит через границу месяца, то он может начинаться в прошлом или заканчиваться в будущем
+                        // обработаем: если m между startMonth и endMonth
+                        if (m < startMonth || m > endMonth) return;
+                    }
+
+                    // определяем день начала и конца в пределах этого месяца
+                    let sDay = (m === startMonth) ? startDay : 1;
+                    let eDay = (m === endMonth) ? endDay : daysInMonth(m, year);
+                    // если челлендж захватывает месяц целиком
+                    if (m > startMonth && m < endMonth) {
+                        sDay = 1;
+                        eDay = daysInMonth(m, year);
+                    }
+                    // если месяц равен startMonth и endMonth одновременно
+                    if (m === startMonth && m === endMonth) {
+                        sDay = startDay;
+                        eDay = endDay;
+                    }
+
+                    // индекс первой ячейки = sDay - 1 (т.к. ячейки идут с 1)
+                    const firstIdx = sDay - 1;
+                    const lastIdx = eDay - 1;
+                    if (firstIdx < 0 || lastIdx >= cells.length) return;
+
+                    const cellStart = cells[firstIdx];
+                    const cellEnd = cells[lastIdx];
+                    if (!cellStart || !cellEnd) return;
+
+                    const startRect = cellStart.getBoundingClientRect();
+                    const endRect = cellEnd.getBoundingClientRect();
+
+                    // позиция полоски relative к layer
+                    const left = startRect.left - layerRect.left;
+                    const right = endRect.right - layerRect.left;
+                    const width = right - left;
+                    // высоту фиксируем, но центрируем по высоте ячейки
+                    const barHeight = Math.min(cellHeight * 0.75, 32);
+                    const top = topOffset + (cellHeight - barHeight) / 2;
+
+                    // создаём полоску
+                    const bar = document.createElement('div');
+                    bar.className = 'challenge-bar';
+                    bar.style.left = left + 'px';
+                    bar.style.top = top + 'px';
+                    bar.style.width = width + 'px';
+                    bar.style.height = barHeight + 'px';
+                    bar.style.backgroundColor = ch.color || '#cbd5e1';
+                    // немного прозрачности, чтобы видно было цифры
+                    bar.style.opacity = '0.7';
+                    // тень
+                    bar.style.boxShadow = '0 1px 6px rgba(0,0,0,0.08)';
+                    // текст внутри полоски
+                    const label = document.createElement('span');
+                    label.className = 'bar-label';
+                    label.textContent = `${ch.icon || ''} ${ch.name}`;
+                    bar.appendChild(label);
+
+                    // клик
+                    bar.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        openModal(ch);
+                    });
+
+                    // добавляем в слой
+                    layer.appendChild(bar);
+                });
+            }
+        }
+
+        // ------------------------------------------------------------
+        // 4. МОДАЛЬНОЕ ОКНО
+        // ------------------------------------------------------------
+        const modal = document.getElementById('modal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalBadge = document.getElementById('modalBadge');
+        const modalDesc = document.getElementById('modalDesc');
+        const modalDates = document.getElementById('modalDates');
+        const modalClose = document.getElementById('modalCloseBtn');
+
+        function openModal(ch) {
+            modalTitle.textContent = `${ch.icon || '🎯'} ${ch.name}`;
+            modalBadge.textContent = 'Челлендж';
+            modalDesc.textContent = ch.description || 'Нет описания';
+            const startStr = `${ch.start.day} ${months[ch.start.month]}`;
+            const endStr = `${ch.end.day} ${months[ch.end.month]}`;
+            modalDates.textContent = `с ${startStr} по ${endStr} ${ch.end.year}`;
+            modal.classList.add('active');
+        }
+
+        modalClose.addEventListener('click', function() {
+            modal.classList.remove('active');
+        });
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) modal.classList.remove('active');
+        });
+
+        // ------------------------------------------------------------
+        // 5. ПЕРЕРИСОВКА ПРИ ИЗМЕНЕНИИ РАЗМЕРА (debounce)
+        // ------------------------------------------------------------
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                renderChallenges();
+            }, 200);
+        });
+
+        // ------------------------------------------------------------
+        // 6. ЗАПУСК
+        // ------------------------------------------------------------
+        buildCalendar();
+    })();
+</script>
 </body>
 </html>
