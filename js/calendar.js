@@ -1,5 +1,5 @@
 // ============================================================
-// КАЛЕНДАРЬ (ПОЛОСЫ ПОВЕРХ ДНЕЙ)
+// КАЛЕНДАРЬ (ПОЛОСЫ ПРЯМО ПОД ЦИФРАМИ ДНЕЙ)
 // ============================================================
 
 let currentYear = new Date().getFullYear();
@@ -73,15 +73,15 @@ function renderMonth(year, month) {
         }
         
         gridHtml += `
-            <div class="${cls}" onclick="openDayModal('${dateStr}')" style="position:relative;z-index:2;">
-                <span class="day-number">${d}</span>
-                ${dots ? `<div style="display:flex;gap:1px;margin-top:1px;flex-wrap:wrap;justify-content:center;">${dots}</div>` : ''}
+            <div class="${cls}" onclick="openDayModal('${dateStr}')" style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40px;padding:2px;">
+                <span class="day-number" style="font-size:14px;font-weight:500;z-index:3;position:relative;">${d}</span>
+                ${dots ? `<div style="display:flex;gap:2px;margin-top:2px;flex-wrap:wrap;justify-content:center;z-index:3;position:relative;">${dots}</div>` : ''}
             </div>
         `;
     }
     
     // ============================================================
-    // ПОЛОСЫ — ПОВЕРХ ДНЕЙ (КАК НАЛОЖЕНИЕ)
+    // ПОЛОСЫ ПРЯМО ПОД ЦИФРАМИ ДНЕЙ
     // ============================================================
     const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
     const monthChallenges = APP.challenges.filter(ch => {
@@ -103,13 +103,12 @@ function renderMonth(year, month) {
         }
     }
     
-    // Строим полосы поверх дней
+    // Строим полосы поверх дней (под цифрами)
     let overlayHtml = '';
     for (let ch of uniqueChallenges) {
         let startDay = 1;
         let endDay = daysInMonth;
         
-        // Определяем реальные даты начала и окончания в этом месяце
         if (ch.startDate && ch.startDate.slice(0,7) === monthStr) {
             startDay = parseInt(ch.startDate.split('-')[2]) || 1;
         }
@@ -121,38 +120,31 @@ function renderMonth(year, month) {
             endDay = daysInMonth;
         }
         
-        // Вычисляем позицию полосы в сетке
-        const startOffset = offset + startDay - 1;
-        const endOffset = offset + endDay - 1;
-        const totalCells = offset + daysInMonth;
-        const cols = 7;
-        
-        const startRow = Math.floor(startOffset / cols);
-        const endRow = Math.floor(endOffset / cols);
-        const startCol = startOffset % cols;
-        const endCol = endOffset % cols;
-        
-        // Полоса может занимать несколько строк
-        for (let row = startRow; row <= endRow; row++) {
-            const rowStartCol = (row === startRow) ? startCol : 0;
-            const rowEndCol = (row === endRow) ? endCol : cols - 1;
-            const left = (rowStartCol / cols * 100);
-            const width = ((rowEndCol - rowStartCol + 1) / cols * 100);
-            const top = (row / (Math.ceil(totalCells / cols)) * 100);
-            const height = (1 / (Math.ceil(totalCells / cols)) * 100);
+        // Перебираем дни, на которые приходится челлендж
+        for (let d = startDay; d <= endDay; d++) {
+            const dayIndex = offset + d - 1;
+            const row = Math.floor(dayIndex / 7);
+            const col = dayIndex % 7;
+            const totalRows = Math.ceil((offset + daysInMonth) / 7);
+            
+            // Позиция ячейки в процентах
+            const top = (row / totalRows * 100);
+            const left = (col / 7 * 100);
+            const width = (1 / 7 * 100);
+            const height = (1 / totalRows * 100);
             
             overlayHtml += `
-                <div class="challenge-bar-overlay" style="
+                <div class="challenge-bar-cell" style="
                     position: absolute;
                     top: ${top}%;
                     left: ${left}%;
                     width: ${width}%;
                     height: ${height}%;
                     background: ${ch.color};
-                    opacity: 0.3;
-                    border-radius: 2px;
-                    pointer-events: none;
+                    opacity: 0.25;
                     z-index: 1;
+                    pointer-events: none;
+                    border-radius: 2px;
                 "></div>
             `;
         }
@@ -177,7 +169,7 @@ function renderMonth(year, month) {
     return `
         <div class="calendar-month" data-year="${year}" data-month="${month}" style="position:relative;">
             <div class="month-title">${monthNames[month]} ${year}</div>
-            <div class="month-grid" style="position:relative;overflow:hidden;">
+            <div class="month-grid" style="position:relative;display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">
                 ${gridHtml}
                 ${overlayHtml}
             </div>
