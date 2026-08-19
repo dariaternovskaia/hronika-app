@@ -9,16 +9,16 @@
 </head>
 <body>
     <div id="app">
-        <!-- ШАПКА С НАВИГАЦИЕЙ (ВОТ ЭТИ ВАЖНЫЕ КНОПКИ!) -->
+        <!-- ШАПКА С НАВИГАЦИЕЙ -->
         <header class="header">
-            <h1>📅 Хроника</h1>
+            <h1>Хроника</h1>
             <nav class="nav-tabs">
-                <button class="nav-tab active" data-section="calendar">📆 Календарь</button>
-                <button class="nav-tab" data-section="study">📚 Учебные материалы</button>
-                <button class="nav-tab" data-section="photo">📸 Фото</button>
-                <button class="nav-tab" data-section="reader">📖 Читательский дневник</button>
-                <button class="nav-tab" data-section="cinema">🎬 Кинодневник</button>
-                <button class="nav-tab" data-section="exit">🚪 Выход</button>
+                <button class="nav-tab active" data-section="calendar">Календарь</button>
+                <button class="nav-tab" data-section="study">Учебные материалы</button>
+                <button class="nav-tab" data-section="photo">Фото</button>
+                <button class="nav-tab" data-section="reader">Читательский дневник</button>
+                <button class="nav-tab" data-section="cinema">Кинодневник</button>
+                <button class="nav-tab" data-section="exit">Выход</button>
             </nav>
         </header>
 
@@ -28,23 +28,23 @@
                 <div id="calendar"></div>
             </section>
             <section id="section-study" class="section">
-                <h2>📚 Учебные материалы</h2>
+                <h2>Учебные материалы</h2>
                 <div id="studyContent"></div>
             </section>
             <section id="section-photo" class="section">
-                <h2>📸 Фото</h2>
+                <h2>Фото</h2>
                 <div id="photoContent"></div>
             </section>
             <section id="section-reader" class="section">
-                <h2>📖 Читательский дневник</h2>
+                <h2>Читательский дневник</h2>
                 <div id="readerContent"></div>
             </section>
             <section id="section-cinema" class="section">
-                <h2>🎬 Кинодневник</h2>
+                <h2>Кинодневник</h2>
                 <div id="cinemaContent"></div>
             </section>
             <section id="section-exit" class="section">
-                <h2>🚪 Выход</h2>
+                <h2>Выход</h2>
                 <p>Вы вышли из приложения</p>
             </section>
         </main>
@@ -54,13 +54,14 @@
     <div id="modal" class="modal-overlay">
         <div class="modal-card">
             <h2 id="modalTitle">Челлендж</h2>
-            <span class="badge" id="modalBadge">🎯</span>
+            <span class="badge" id="modalBadge">Задача</span>
             <p id="modalDesc">Описание</p>
             <div class="dates" id="modalDates"></div>
             <button class="modal-close" id="modalCloseBtn">Закрыть</button>
         </div>
     </div>
 
+    <!-- ПОДКЛЮЧАЕМ СКРИПТЫ -->
     <script src="js/calendar.js"></script>
     <script src="js/navigation.js"></script>
     <script src="js/study.js"></script>
