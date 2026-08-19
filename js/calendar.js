@@ -1,334 +1,367 @@
-// ============================================================
-// calendar.js — только календарь + полосы (не трогает другие разделы)
-// ============================================================
+// ========== ДАННЫЕ ЧЕЛЛЕНДЖЕЙ (хранятся в localStorage) ==========
+let challenges = JSON.parse(localStorage.getItem('challenges') || '[]');
 
-(function() {
-    'use strict';
-
-    // ---------- данные челленджей ----------
-    const challenges = [
+// Если челленджей нет — добавим демо-данные для первого запуска
+if (challenges.length === 0) {
+    challenges = [
         {
             id: 'ch1',
             name: 'Английский каждый день',
-            description: '30 минут чтения + 10 новых слов',
-            start: { day: 3, month: 0, year: 2026 },
-            end:   { day: 25, month: 0, year: 2026 },
-            color: '#fde68a',
-            icon: '🇬🇧'
+            comment: '30 минут чтения + 10 новых слов',
+            startDate: { day: 3, month: 0, year: 2026 },
+            endDate: { day: 25, month: 0, year: 2026 },
+            pace: { unit: 'lessons', customUnit: '', total: 30, perSession: 1, frequency: 'daily' },
+            topic: 'linguistics',
+            type: 'courses',
+            color: '#fde68a'
         },
         {
             id: 'ch2',
             name: 'Утренняя зарядка',
-            description: '15 минут растяжки',
-            start: { day: 10, month: 0, year: 2026 },
-            end:   { day: 28, month: 0, year: 2026 },
-            color: '#bbf7d0',
-            icon: '💪'
+            comment: '15 минут растяжки',
+            startDate: { day: 10, month: 0, year: 2026 },
+            endDate: { day: 28, month: 0, year: 2026 },
+            pace: { unit: 'tasks', customUnit: '', total: 20, perSession: 1, frequency: 'daily' },
+            topic: 'other',
+            type: 'other',
+            color: '#bbf7d0'
         },
         {
             id: 'ch3',
             name: 'Медитация',
-            description: '10 минут осознанности',
-            start: { day: 1, month: 1, year: 2026 },
-            end:   { day: 20, month: 1, year: 2026 },
-            color: '#c7d2fe',
-            icon: '🧘'
-        },
-        {
-            id: 'ch4',
-            name: 'Чтение книг',
-            description: '30 страниц в день',
-            start: { day: 5, month: 1, year: 2026 },
-            end:   { day: 26, month: 1, year: 2026 },
-            color: '#fecaca',
-            icon: '📚'
-        },
-        {
-            id: 'ch5',
-            name: 'Прогулка 10k шагов',
-            description: 'Ежедневная прогулка',
-            start: { day: 8, month: 2, year: 2026 },
-            end:   { day: 30, month: 2, year: 2026 },
-            color: '#fed7aa',
-            icon: '🚶'
-        },
-        {
-            id: 'ch6',
-            name: 'Испанский с нуля',
-            description: 'Duolingo + произношение',
-            start: { day: 1, month: 3, year: 2026 },
-            end:   { day: 18, month: 3, year: 2026 },
-            color: '#bae6fd',
-            icon: '🇪🇸'
+            comment: '10 минут осознанности',
+            startDate: { day: 1, month: 1, year: 2026 },
+            endDate: null,
+            pace: { unit: 'custom', customUnit: 'минут', total: 100, perSession: 10, frequency: 'daily' },
+            topic: 'philosophy',
+            type: 'other',
+            color: '#c7d2fe'
         }
     ];
+    saveChallenges();
+}
 
-    // ---------- вспомогательное ----------
-    function daysInMonth(m, y) {
-        return new Date(y, m + 1, 0).getDate();
-    }
+function saveChallenges() {
+    localStorage.setItem('challenges', JSON.stringify(challenges));
+}
 
-    function getFirstDayOfMonth(m, y) {
-        return new Date(y, m, 1).getDay();
-    }
+// ========== КОНСТАНТЫ ==========
+const year = 2026;
+const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 
-    const year = 2026;
-    const monthNames = [
-        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-    ];
+const topicNames = {
+    math: 'Математика',
+    philosophy: 'Философия',
+    linguistics: 'Языкознание',
+    other: 'Другое'
+};
 
-    // ---------- главная функция отрисовки ----------
-    function renderCalendar() {
-        const container = document.getElementById('calendar');
-        if (!container) return;
+const typeNames = {
+    books: 'Книги',
+    courses: 'Курсы',
+    other: 'Другое'
+};
 
-        let html = '';
+const unitNames = {
+    pages: 'страницы',
+    lessons: 'занятия',
+    tasks: 'уроки',
+    exercises: 'задания',
+    custom: 'своё'
+};
 
-        for (let m = 0; m < 12; m++) {
-            const totalDays = daysInMonth(m, year);
-            const firstDay = getFirstDayOfMonth(m, year);
+const frequencyNames = {
+    daily: 'ежедневно',
+    weekly: 'еженедельно',
+    custom: 'своя частота'
+};
 
-            html += `<div class="month-row" data-month="${m}" data-year="${year}">`;
-            html += `<div class="month-label">${monthNames[m]} <span class="year">${year}</span></div>`;
-            html += `<div class="days-wrapper" style="position:relative; padding: 8px 6px 8px 10px;">`;
+// ========== УТИЛИТЫ ==========
+function daysInMonth(m, y) {
+    return new Date(y, m + 1, 0).getDate();
+}
 
-            // ---- сетка дней ----
-            html += `<div class="days-grid" id="daysGrid_${m}" style="display:grid; grid-template-columns: repeat(31, 34px); gap:2px; position:relative; min-height:64px;">`;
-            for (let d = 1; d <= totalDays; d++) {
-                const dateObj = new Date(year, m, d);
-                const dayOfWeek = dateObj.getDay();
-                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                const today = new Date();
-                const isToday = (today.getFullYear() === year && today.getMonth() === m && today.getDate() === d);
-                let cls = 'day-cell';
-                if (isWeekend) cls += ' weekend';
-                if (isToday) cls += ' today';
-                html += `<div class="${cls}" data-day="${d}" data-month="${m}">${d}</div>`;
-            }
-            html += `</div>`;
+function getFirstDayOfMonth(m, y) {
+    return new Date(y, m, 1).getDay();
+}
 
-            // ---- слой для полос (поверх дней) ----
-            html += `<div class="challenge-layer" id="challengeLayer_${m}" style="position:absolute; top:8px; left:10px; right:6px; bottom:8px; pointer-events:none; z-index:5; overflow:visible;"></div>`;
-            html += `</div>`; // days-wrapper
-            html += `</div>`; // month-row
+function generateId() {
+    return 'ch_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// ========== ОТРИСОВКА КАЛЕНДАРЯ ==========
+function renderCalendar() {
+    const container = document.getElementById('calendar');
+    if (!container) return;
+
+    let html = '';
+
+    // Кнопка "Добавить челлендж"
+    html += `<div style="margin-bottom: 16px; display: flex; justify-content: flex-end;">
+        <button class="add-challenge-btn" onclick="openChallengeModal()">+ Добавить челлендж</button>
+    </div>`;
+
+    for (let m = 0; m < 12; m++) {
+        const totalDays = daysInMonth(m, year);
+
+        html += `<div class="month-row" data-month="${m}">`;
+        
+        // Левая колонка — название месяца
+        html += `<div class="month-label">
+            ${monthNames[m]}
+            <span class="year">${year}</span>
+        </div>`;
+
+        // Правая часть — дни и полоски
+        html += `<div class="month-content">`;
+        
+        // Сетка дней (всегда видна, не перекрывается)
+        html += `<div class="days-grid">`;
+        for (let d = 1; d <= totalDays; d++) {
+            const dateObj = new Date(year, m, d);
+            const dayOfWeek = dateObj.getDay();
+            const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+            const today = new Date();
+            const isToday = (today.getFullYear() === year && today.getMonth() === m && today.getDate() === d);
+            
+            let cls = 'day-cell';
+            if (isWeekend) cls += ' weekend';
+            if (isToday) cls += ' today';
+            
+            html += `<div class="${cls}" data-day="${d}" data-month="${m}">${d}</div>`;
         }
+        html += `</div>`;
 
-        container.innerHTML = html;
-
-        // отрисовываем полосы после того, как DOM построен
-        renderChallenges();
+        // Область для полосок челленджей (ПОД сеткой дней)
+        html += `<div class="challenge-bars-area" id="challengeBars_${m}"></div>`;
+        
+        html += `</div>`; // close month-content
+        html += `</div>`; // close month-row
     }
 
-    // ---------- отрисовка полос (без перекрытия) ----------
-    function renderChallenges() {
-        for (let m = 0; m < 12; m++) {
-            const layer = document.getElementById(`challengeLayer_${m}`);
-            if (!layer) continue;
-            layer.innerHTML = '';
+    container.innerHTML = html;
+    renderChallengeBars();
+}
 
-            const grid = document.getElementById(`daysGrid_${m}`);
-            if (!grid) continue;
+// ========== ОТРИСОВКА ПОЛОСОК ЧЕЛЛЕНДЖЕЙ ==========
+function renderChallengeBars() {
+    for (let m = 0; m < 12; m++) {
+        const barsArea = document.getElementById(`challengeBars_${m}`);
+        if (!barsArea) continue;
+        barsArea.innerHTML = '';
 
-            const cells = grid.querySelectorAll('.day-cell');
-            if (cells.length === 0) continue;
+        // Собираем челленджи, которые пересекаются с этим месяцем
+        const monthChallenges = challenges.filter(ch => {
+            const sM = ch.startDate.month;
+            const eM = ch.endDate ? ch.endDate.month : 11;
+            return m >= sM && m <= eM;
+        });
 
-            const layerRect = layer.getBoundingClientRect();
-            if (layerRect.width === 0) continue;
+        // Рисуем каждую полоску
+        monthChallenges.forEach(ch => {
+            const sM = ch.startDate.month;
+            const eM = ch.endDate ? ch.endDate.month : 11;
+            
+            let sDay = (m === sM) ? ch.startDate.day : 1;
+            let eDay = (m === eM) ? (ch.endDate ? ch.endDate.day : daysInMonth(m, year)) : daysInMonth(m, year);
 
-            const firstRect = cells[0].getBoundingClientRect();
-            const lastRect = cells[cells.length - 1].getBoundingClientRect();
-            const cellWidth = firstRect.width + 2;
-            const cellHeight = firstRect.height + 2;
-            const leftOffset = firstRect.left - layerRect.left;
-            const topOffset = firstRect.top - layerRect.top;
-
-            // ---- собираем все полосы для этого месяца ----
-            const barsForMonth = [];
-
-            challenges.forEach((ch) => {
-                const sM = ch.start.month, eM = ch.end.month;
-                if (m < sM || m > eM) return;
-
-                let sDay = (m === sM) ? ch.start.day : 1;
-                let eDay = (m === eM) ? ch.end.day : daysInMonth(m, year);
-                if (m > sM && m < eM) { sDay = 1; eDay = daysInMonth(m, year); }
-                if (m === sM && m === eM) { sDay = ch.start.day; eDay = ch.end.day; }
-
-                const firstIdx = sDay - 1;
-                const lastIdx = eDay - 1;
-                if (firstIdx < 0 || lastIdx >= cells.length) return;
-
-                const cellStart = cells[firstIdx];
-                const cellEnd = cells[lastIdx];
-                if (!cellStart || !cellEnd) return;
-
-                const startRect = cellStart.getBoundingClientRect();
-                const endRect = cellEnd.getBoundingClientRect();
-
-                const left = startRect.left - layerRect.left;
-                const width = (endRect.right - layerRect.left) - left;
-
-                barsForMonth.push({
-                    challenge: ch,
-                    left: left,
-                    width: width,
-                    top: topOffset,
-                    cellHeight: cellHeight,
-                    barHeight: Math.min(cellHeight * 0.75, 32)
-                });
-            });
-
-            // ---- сортируем по длине (короткие сверху) ----
-            barsForMonth.sort((a, b) => a.width - b.width);
-
-            // ---- размещаем без перекрытия (вертикальный стек) ----
-            const positions = [];
-            const barHeight = barsForMonth.length > 0 ? barsForMonth[0].barHeight : 20;
-            const gap = 2;
-
-            barsForMonth.forEach((barData) => {
-                let placed = false;
-                // пробуем найти свободную вертикальную позицию
-                for (let row = 0; row < 10; row++) {
-                    const y = topOffset + row * (barHeight + gap);
-                    // проверяем пересечение по X с уже размещёнными в этой строке
-                    let overlap = false;
-                    for (const placedBar of positions) {
-                        if (Math.abs(placedBar.row - row) > 0.5) continue;
-                        // проверяем пересечение по X
-                        const left1 = barData.left;
-                        const right1 = barData.left + barData.width;
-                        const left2 = placedBar.left;
-                        const right2 = placedBar.left + placedBar.width;
-                        if (left1 < right2 && right1 > left2) {
-                            overlap = true;
-                            break;
-                        }
-                    }
-                    if (!overlap) {
-                        positions.push({
-                            row: row,
-                            left: barData.left,
-                            width: barData.width,
-                            y: y
-                        });
-                        placed = true;
-                        break;
-                    }
-                }
-                if (!placed) {
-                    // если не нашлось места — просто кладём в самую низкую свободную позицию
-                    const y = topOffset + positions.length * (barHeight + gap);
-                    positions.push({
-                        row: positions.length,
-                        left: barData.left,
-                        width: barData.width,
-                        y: y
-                    });
-                }
-            });
-
-            // ---- рисуем полосы по вычисленным позициям ----
-            barsForMonth.forEach((barData, idx) => {
-                const pos = positions[idx];
-                if (!pos) return;
-
-                const ch = barData.challenge;
-                const bar = document.createElement('div');
-                bar.className = 'challenge-bar';
-                bar.style.position = 'absolute';
-                bar.style.left = pos.left + 'px';
-                bar.style.top = pos.y + 'px';
-                bar.style.width = pos.width + 'px';
-                bar.style.height = barHeight + 'px';
-                bar.style.backgroundColor = ch.color || '#cbd5e1';
-                bar.style.opacity = '0.75';
-                bar.style.borderRadius = '20px';
-                bar.style.pointerEvents = 'auto';
-                bar.style.cursor = 'pointer';
-                bar.style.display = 'flex';
-                bar.style.alignItems = 'center';
-                bar.style.paddingLeft = '8px';
-                bar.style.fontSize = '10px';
-                bar.style.fontWeight = '600';
-                bar.style.color = '#0f172a';
-                bar.style.whiteSpace = 'nowrap';
-                bar.style.overflow = 'hidden';
-                bar.style.textOverflow = 'ellipsis';
-                bar.style.border = '1px solid rgba(255,255,255,0.2)';
-                bar.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
-                bar.style.zIndex = '10';
-                bar.style.transition = 'opacity 0.15s, transform 0.1s, box-shadow 0.15s';
-
-                bar.textContent = `${ch.icon || ''} ${ch.name}`;
-
-                bar.addEventListener('mouseenter', function() {
-                    this.style.opacity = '1';
-                    this.style.transform = 'scaleY(1.12)';
-                    this.style.boxShadow = '0 4px 14px rgba(0,0,0,0.15)';
-                    this.style.zIndex = '20';
-                });
-                bar.addEventListener('mouseleave', function() {
-                    this.style.opacity = '0.75';
-                    this.style.transform = 'scaleY(1)';
-                    this.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)';
-                    this.style.zIndex = '10';
-                });
-
-                bar.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    openModal(ch);
-                });
-
-                layer.appendChild(bar);
-            });
-        }
-    }
-
-    // ---------- модальное окно ----------
-    const modal = document.getElementById('modal');
-    const modalTitle = document.getElementById('modalTitle');
-    const modalBadge = document.getElementById('modalBadge');
-    const modalDesc = document.getElementById('modalDesc');
-    const modalDates = document.getElementById('modalDates');
-    const modalClose = document.getElementById('modalCloseBtn');
-
-    function openModal(ch) {
-        if (!modal) return;
-        modalTitle.textContent = `${ch.icon || '🎯'} ${ch.name}`;
-        modalBadge.textContent = 'Челлендж';
-        modalDesc.textContent = ch.description || 'Нет описания';
-        const startStr = `${ch.start.day} ${monthNames[ch.start.month]}`;
-        const endStr = `${ch.end.day} ${monthNames[ch.end.month]}`;
-        modalDates.textContent = `с ${startStr} по ${endStr} ${ch.end.year}`;
-        modal.classList.add('active');
-    }
-
-    if (modalClose) {
-        modalClose.addEventListener('click', function() {
-            modal.classList.remove('active');
+            const bar = document.createElement('div');
+            bar.className = 'challenge-bar';
+            bar.style.backgroundColor = ch.color || '#cbd5e1';
+            bar.style.width = `${((eDay - sDay + 1) / daysInMonth(m, year)) * 100}%`;
+            bar.style.marginLeft = `${((sDay - 1) / daysInMonth(m, year)) * 100}%`;
+            
+            bar.innerHTML = `<span class="bar-label">${ch.name}</span>`;
+            
+            // Клик — открыть модалку редактирования
+            bar.addEventListener('click', () => openChallengeModal(ch.id));
+            
+            barsArea.appendChild(bar);
         });
     }
+}
+
+// ========== МОДАЛЬНОЕ ОКНО СОЗДАНИЯ/РЕДАКТИРОВАНИЯ ==========
+function openChallengeModal(challengeId = null) {
+    const modal = document.getElementById('challengeModal');
+    if (!modal) return;
+
+    const isEdit = challengeId !== null;
+    const ch = isEdit ? challenges.find(c => c.id === challengeId) : null;
+
+    // Заполняем форму
+    document.getElementById('challengeModalTitle').textContent = isEdit ? 'Редактировать челлендж' : 'Новый челлендж';
+    document.getElementById('chName').value = ch ? ch.name : '';
+    document.getElementById('chComment').value = ch ? ch.comment : '';
+    
+    // Даты
+    if (ch) {
+        document.getElementById('chStartDate').value = formatDateForInput(ch.startDate);
+        if (ch.endDate) {
+            document.getElementById('chEndDate').value = formatDateForInput(ch.endDate);
+            document.getElementById('chNoEndDate').checked = false;
+            document.getElementById('chEndDate').disabled = false;
+        } else {
+            document.getElementById('chNoEndDate').checked = true;
+            document.getElementById('chEndDate').disabled = true;
+        }
+    } else {
+        document.getElementById('chStartDate').value = '';
+        document.getElementById('chEndDate').value = '';
+        document.getElementById('chNoEndDate').checked = false;
+        document.getElementById('chEndDate').disabled = false;
+    }
+
+    // Темп
+    document.getElementById('chUnit').value = ch ? ch.pace.unit : 'lessons';
+    document.getElementById('chCustomUnit').value = ch ? ch.pace.customUnit : '';
+    document.getElementById('chCustomUnit').style.display = ch && ch.pace.unit === 'custom' ? 'block' : 'none';
+    document.getElementById('chTotal').value = ch ? ch.pace.total : '';
+    document.getElementById('chPerSession').value = ch ? ch.pace.perSession : '';
+    document.getElementById('chFrequency').value = ch ? ch.pace.frequency : 'daily';
+
+    // Тема и тип
+    document.getElementById('chTopic').value = ch ? ch.topic : 'other';
+    document.getElementById('chType').value = ch ? ch.type : 'other';
+
+    // Цвет
+    document.getElementById('chColor').value = ch ? ch.color : '#fde68a';
+
+    // Кнопка удаления
+    document.getElementById('deleteChallengeBtn').style.display = isEdit ? 'block' : 'none';
+
+    // Сохраняем ID для сохранения
+    modal.dataset.editingId = challengeId || '';
+
+    modal.classList.add('active');
+}
+
+function closeChallengeModal() {
+    const modal = document.getElementById('challengeModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function saveChallenge() {
+    const modal = document.getElementById('challengeModal');
+    const editingId = modal.dataset.editingId;
+    const isEdit = editingId !== '';
+
+    // Собираем данные
+    const name = document.getElementById('chName').value.trim();
+    if (!name) {
+        alert('Введите название челленджа');
+        return;
+    }
+
+    const startDateStr = document.getElementById('chStartDate').value;
+    if (!startDateStr) {
+        alert('Выберите дату начала');
+        return;
+    }
+
+    const startDate = parseDateInput(startDateStr);
+    const noEndDate = document.getElementById('chNoEndDate').checked;
+    const endDate = noEndDate ? null : parseDateInput(document.getElementById('chEndDate').value);
+
+    if (!noEndDate && !document.getElementById('chEndDate').value) {
+        alert('Выберите дату окончания или отметьте "Без даты окончания"');
+        return;
+    }
+
+    const unit = document.getElementById('chUnit').value;
+    const customUnit = unit === 'custom' ? document.getElementById('chCustomUnit').value.trim() : '';
+
+    const challenge = {
+        id: isEdit ? editingId : generateId(),
+        name: name,
+        comment: document.getElementById('chComment').value.trim(),
+        startDate: startDate,
+        endDate: endDate,
+        pace: {
+            unit: unit,
+            customUnit: customUnit,
+            total: parseInt(document.getElementById('chTotal').value) || 0,
+            perSession: parseInt(document.getElementById('chPerSession').value) || 0,
+            frequency: document.getElementById('chFrequency').value
+        },
+        topic: document.getElementById('chTopic').value,
+        type: document.getElementById('chType').value,
+        color: document.getElementById('chColor').value
+    };
+
+    if (isEdit) {
+        const idx = challenges.findIndex(c => c.id === editingId);
+        if (idx !== -1) challenges[idx] = challenge;
+    } else {
+        challenges.push(challenge);
+    }
+
+    saveChallenges();
+    closeChallengeModal();
+    renderCalendar();
+}
+
+function deleteChallenge() {
+    const modal = document.getElementById('challengeModal');
+    const editingId = modal.dataset.editingId;
+    
+    if (!editingId) return;
+    
+    if (!confirm('Удалить этот челлендж?')) return;
+    
+    challenges = challenges.filter(c => c.id !== editingId);
+    saveChallenges();
+    closeChallengeModal();
+    renderCalendar();
+}
+
+// ========== УТИЛИТЫ ДАТ ==========
+function formatDateForInput(dateObj) {
+    const y = dateObj.year;
+    const m = String(dateObj.month + 1).padStart(2, '0');
+    const d = String(dateObj.day).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function parseDateInput(dateStr) {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return { day: d, month: m - 1, year: y };
+}
+
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
+document.addEventListener('DOMContentLoaded', function() {
+    // Чекбокс "Без даты окончания"
+    const noEndDateCheckbox = document.getElementById('chNoEndDate');
+    if (noEndDateCheckbox) {
+        noEndDateCheckbox.addEventListener('change', function() {
+            document.getElementById('chEndDate').disabled = this.checked;
+        });
+    }
+
+    // Выбор единицы измерения
+    const unitSelect = document.getElementById('chUnit');
+    if (unitSelect) {
+        unitSelect.addEventListener('change', function() {
+            document.getElementById('chCustomUnit').style.display = this.value === 'custom' ? 'block' : 'none';
+        });
+    }
+
+    // Кнопки модалки
+    const saveBtn = document.getElementById('saveChallengeBtn');
+    if (saveBtn) saveBtn.addEventListener('click', saveChallenge);
+
+    const deleteBtn = document.getElementById('deleteChallengeBtn');
+    if (deleteBtn) deleteBtn.addEventListener('click', deleteChallenge);
+
+    const cancelBtn = document.getElementById('cancelChallengeBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', closeChallengeModal);
+
+    // Закрытие по клику на оверлей
+    const modal = document.getElementById('challengeModal');
     if (modal) {
         modal.addEventListener('click', function(e) {
-            if (e.target === modal) modal.classList.remove('active');
+            if (e.target === modal) closeChallengeModal();
         });
     }
-
-    // ---------- ресайз ----------
-    let resizeTimeout;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            renderChallenges();
-        }, 200);
-    });
-
-    // ---------- запуск ----------
-    document.addEventListener('DOMContentLoaded', renderCalendar);
-    if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        renderCalendar();
-    }
-
-})();
+});

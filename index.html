@@ -9,7 +9,6 @@
 </head>
 <body>
     <div id="app">
-        <!-- ШАПКА С НАВИГАЦИЕЙ (исправлено под реальный app.js) -->
         <div class="container">
             <h1 style="text-align: center; margin-bottom: 16px; font-weight: 300; letter-spacing: 2px; color: #7a8ba8;">Хроника</h1>
             <nav class="nav">
@@ -22,7 +21,6 @@
             </nav>
         </div>
 
-        <!-- КОНТЕЙНЕРЫ ДЛЯ РАЗДЕЛОВ (ID должны совпадать с логикой app.js) -->
         <main class="container">
             <section id="screenCalendar" class="screen active">
                 <div id="calendar"></div>
@@ -62,18 +60,92 @@
         </main>
     </div>
 
-    <!-- МОДАЛКА ДЛЯ ЧЕЛЛЕНДЖЕЙ -->
-    <div id="modal" class="modal-overlay">
-        <div class="modal-card">
-            <h2 id="modalTitle">Челлендж</h2>
-            <span class="badge" id="modalBadge">Задача</span>
-            <p id="modalDesc">Описание</p>
-            <div class="dates" id="modalDates"></div>
-            <button class="modal-close" id="modalCloseBtn">Закрыть</button>
+    <!-- МОДАЛКА ЧЕЛЛЕНДЖА -->
+    <div id="challengeModal" class="modal-overlay">
+        <div class="modal-card challenge-modal-card">
+            <h2 id="challengeModalTitle">Новый челлендж</h2>
+            
+            <div class="form-group">
+                <label>Название</label>
+                <input type="text" id="chName" placeholder="Например: Читать 30 страниц в день" />
+            </div>
+
+            <div class="form-group">
+                <label>Комментарий</label>
+                <textarea id="chComment" placeholder="Описание челленджа..."></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Дата начала</label>
+                    <input type="date" id="chStartDate" />
+                </div>
+                <div class="form-group">
+                    <label>Дата окончания</label>
+                    <input type="date" id="chEndDate" />
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="chNoEndDate" />
+                        Без даты окончания
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Темп выполнения</label>
+                <div class="pace-row">
+                    <select id="chUnit">
+                        <option value="pages">страницы</option>
+                        <option value="lessons">занятия</option>
+                        <option value="tasks">уроки</option>
+                        <option value="exercises">задания</option>
+                        <option value="custom">своё</option>
+                    </select>
+                    <input type="text" id="chCustomUnit" placeholder="Единица измерения" style="display:none;" />
+                </div>
+                <div class="pace-row">
+                    <input type="number" id="chTotal" placeholder="Всего" min="0" />
+                    <input type="number" id="chPerSession" placeholder="За раз" min="0" />
+                    <select id="chFrequency">
+                        <option value="daily">ежедневно</option>
+                        <option value="weekly">еженедельно</option>
+                        <option value="custom">своя частота</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Тема</label>
+                    <select id="chTopic">
+                        <option value="math">Математика</option>
+                        <option value="philosophy">Философия</option>
+                        <option value="linguistics">Языкознание</option>
+                        <option value="other">Другое</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Тип</label>
+                    <select id="chType">
+                        <option value="books">Книги</option>
+                        <option value="courses">Курсы</option>
+                        <option value="other">Другое</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Цвет</label>
+                <input type="color" id="chColor" value="#fde68a" />
+            </div>
+
+            <div class="modal-actions">
+                <button id="deleteChallengeBtn" class="btn-secondary" style="display:none;">Удалить</button>
+                <button id="cancelChallengeBtn" class="btn-secondary">Отмена</button>
+                <button id="saveChallengeBtn" class="btn-primary">Сохранить</button>
+            </div>
         </div>
     </div>
 
-    <!-- ПОДКЛЮЧАЕМ СКРИПТЫ (реальные имена файлов из твоего репозитория) -->
     <script src="js/app.js"></script>
     <script src="js/calendar.js"></script>
     <script src="js/studies.js"></script>
