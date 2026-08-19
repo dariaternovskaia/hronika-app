@@ -34,9 +34,7 @@
 
             <!-- Календарь -->
             <div id="screenCalendar" class="screen active">
-                <div class="calendar-wrapper" id="calendarWrapper">
-                    <!-- Заполняется из calendar.js -->
-                </div>
+                <div class="calendar-wrapper" id="calendarWrapper"></div>
             </div>
 
             <!-- Учебные материалы -->
@@ -78,18 +76,18 @@
                 </div>
                 <div id="moviesDiary" class="diary-list"></div>
             </div>
+        </div>
+    </div>
 
-            <!-- Страничка дня (модалка) -->
-            <div id="dayModal" class="modal-overlay">
-                <div class="modal">
-                    <div class="modal-header">
-                        <h3 id="dayModalTitle">18 августа 2026</h3>
-                        <button class="close-btn" onclick="closeDayModal()">✕</button>
-                    </div>
-                    <div id="dayModalContent">
-                        <!-- Заполняется из calendar.js -->
-                    </div>
-                </div>
+    <!-- ===== МОДАЛКА ДНЯ (СТРАНИЧКА ДНЯ) ===== -->
+    <div id="dayModal" class="modal-overlay">
+        <div class="modal" style="max-width:700px;">
+            <div class="modal-header">
+                <h3 id="dayModalTitle">18 августа 2026</h3>
+                <button class="close-btn" onclick="closeDayModal()">✕</button>
+            </div>
+            <div id="dayModalContent">
+                <!-- Заполняется из calendar.js -->
             </div>
         </div>
     </div>
