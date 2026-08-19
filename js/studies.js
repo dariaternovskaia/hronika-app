@@ -6,13 +6,8 @@ const STORE_NAME = 'folders';
 function initDB() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, 1);
-        
         request.onerror = () => reject(request.error);
-        request.onsuccess = () => {
-            db = request.result;
-            resolve(db);
-        };
-        
+        request.onsuccess = () => { db = request.result; resolve(db); };
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
             if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -54,13 +49,13 @@ async function deleteFolder(id) {
 
 // ========== ДАННЫЕ ==========
 const subjects = {
-    math: 'Математика',
-    philosophy: 'Философия',
-    linguistics: 'Языкознание'
+    math: { name: 'Математика', color: '#2a4a6a', icon: '📐' },
+    philosophy: { name: 'Философия', color: '#4a2a6a', icon: '️' },
+    linguistics: { name: 'Языкознание', color: '#2a6a4a', icon: '' }
 };
 
 let currentSubject = 'math';
-let currentFolderId = null;
+let currentFolderId = null; // null = корень раздела (без папки)
 
 // ========== ОТРИСОВКА ==========
 async function renderStudies() {
@@ -72,101 +67,155 @@ async function renderStudies() {
 
     let html = '';
 
-    // Навигация по предметам
-    html += `<div class="studies-nav" style="margin-bottom: 20px;">`;
+    // Навигация по предметам (вкладки)
+    html += `<div style="display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;">`;
     Object.keys(subjects).forEach(key => {
-        html += `<button class="${currentSubject === key ? 'active' : ''}" onclick="switchSubject('${key}')">${subjects[key]}</button>`;
+        const s = subjects[key];
+        const isActive = currentSubject === key;
+        html += `<button onclick="switchSubject('${key}')" style="
+            padding:10px 20px;
+            border-radius:12px;
+            border:1px solid ${isActive ? s.color : '#1f2838'};
+            background:${isActive ? s.color : '#141a24'};
+            color:${isActive ? '#e8edf5' : '#7a8ba8'};
+            font-size:14px;
+            font-weight:500;
+            cursor:pointer;
+            font-family:inherit;
+            transition:all 0.2s;
+        ">${s.icon} ${s.name}</button>`;
+    });
+    html += `</div>`;
+
+    // Хлебные крошки
+    const breadcrumbs = [];
+    if (currentFolderId) {
+        let fid = currentFolderId;
+        while (fid) {
+            const f = folders.find(x => x.id === fid);
+            if (f) {
+                breadcrumbs.unshift(f);
+                fid = f.parentId;
+            } else {
+                break;
+            }
+        }
+    }
+
+    html += `<div style="margin-bottom:16px;font-size:13px;color:#7a8ba8;">`;
+    html += `<span style="cursor:pointer;color:#aabbcc;" onclick="goToRoot()">${subjects[currentSubject].name}</span>`;
+    breadcrumbs.forEach(f => {
+        html += ` <span style="color:#5a6a7a;">/</span> <span style="cursor:pointer;color:#aabbcc;" onclick="openFolder('${f.id}')">${f.name}</span>`;
     });
     html += `</div>`;
 
     // Кнопки управления
-    html += `<div style="margin-bottom: 20px; display: flex; gap: 8px; flex-wrap: wrap;">`;
-    if (currentFolderId) {
-        html += `<button onclick="goBack()" style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;">← Назад</button>`;
-    }
-    html += `<button onclick="createFolder()" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 20px;font-size:14px;cursor:pointer;">+ Новая папка</button>`;
-    html += `<button onclick="addItem()" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 20px;font-size:14px;cursor:pointer;">+ Добавить файл/ссылку</button>`;
-    html += `<button onclick="exportStudies()" style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;">📥 Экспорт</button>`;
-    html += `<label style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;">
+    html += `<div style="margin-bottom:20px;display:flex;gap:8px;flex-wrap:wrap;">`;
+    html += `<button onclick="createFolder()" style="background:#1a2230;color:#e8edf5;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">📁 Новая папка</button>`;
+    html += `<button onclick="addItem('file')" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;"> Добавить файл</button>`;
+    html += `<button onclick="addItem('link')" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;"> Добавить ссылку</button>`;
+    html += `<button onclick="exportStudies()" style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">📥 Экспорт</button>`;
+    html += `<label style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">
          Импорт
         <input type="file" id="importStudiesFile" accept=".json" style="display:none;" onchange="importStudies(this.files[0])" />
     </label>`;
     html += `</div>`;
 
-    // Заголовок текущей папки
-    if (currentFolderId) {
-        const currentFolder = folders.find(f => f.id === currentFolderId);
-        if (currentFolder) {
-            html += `<h3 style="margin-bottom: 16px; color: #e8edf5;">📁 ${currentFolder.name}</h3>`;
-        }
-    }
-
-    // Отображение папок и файлов
-    const subjectFolders = folders.filter(f => f.subject === currentSubject && f.parentId === currentFolderId);
+    // Папки в текущем месте
+    const childFolders = folders.filter(f => f.subject === currentSubject && f.parentId === currentFolderId);
     
-    if (subjectFolders.length === 0 && !currentFolderId) {
-        html += `<div style="text-align:center;padding:40px;color:#7a8ba8;font-size:16px;">
-             Пока нет папок. Нажми "+ Новая папка" чтобы создать первую.
-        </div>`;
-    } else {
-        // Папки
-        subjectFolders.forEach(folder => {
+    if (childFolders.length > 0) {
+        html += `<div style="margin-bottom:20px;">`;
+        html += `<div style="font-size:12px;color:#7a8ba8;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Папки</div>`;
+        childFolders.forEach(folder => {
             const itemCount = folder.items ? folder.items.length : 0;
             html += `
-                <div style="background:#141a24;border:1px solid #1f2838;border-radius:12px;padding:16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-                    <div style="cursor:pointer;flex:1;" onclick="openFolder('${folder.id}')">
-                        <div style="font-size:16px;font-weight:500;color:#e8edf5;margin-bottom:4px;">📁 ${folder.name}</div>
-                        <div style="font-size:12px;color:#7a8ba8;">${itemCount} элементов</div>
+                <div style="background:#141a24;border:1px solid #1f2838;border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#1a2230'" onmouseout="this.style.background='#141a24'" onclick="openFolder('${folder.id}')">
+                    <div style="flex:1;">
+                        <div style="font-size:15px;font-weight:500;color:#e8edf5;margin-bottom:2px;">📁 ${folder.name}</div>
+                        <div style="font-size:12px;color:#7a8ba8;">${itemCount} элемент(ов)</div>
                     </div>
-                    <button onclick="deleteFolderPrompt('${folder.id}')" style="background:#3a1a1a;color:#e8edf5;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;">Удалить</button>
+                    <button onclick="event.stopPropagation();deleteFolderPrompt('${folder.id}')" style="background:#3a1a1a;color:#e8edf5;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;">Удалить</button>
                 </div>
             `;
         });
+        html += `</div>`;
+    }
 
-        // Файлы в текущей папке
-        if (currentFolderId) {
-            const currentFolder = folders.find(f => f.id === currentFolderId);
-            if (currentFolder && currentFolder.items) {
-                currentFolder.items.forEach(item => {
-                    html += `
-                        <div style="background:#141a24;border:1px solid #1f2838;border-radius:12px;padding:16px;margin-bottom:12px;">
-                            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px;">
-                                <div style="flex:1;">
-                                    <div style="font-size:14px;font-weight:500;color:#e8edf5;margin-bottom:4px;">
-                                        ${getFileIcon(item.type, item.fileType)} ${item.name}
-                                    </div>
-                                    <div style="font-size:12px;color:#7a8ba8;margin-bottom:8px;">
-                                        ${item.type === 'link' ? '🔗 Ссылка' : '📄 Файл'} • Добавлено: ${item.addedDate}
-                                    </div>
-                                    ${item.comment ? `<div style="font-size:13px;color:#aabbcc;margin-bottom:8px;">${item.comment}</div>` : ''}
-                                    ${item.type === 'link' ? `<a href="${item.url}" target="_blank" style="color:#6a9aaa;text-decoration:none;font-size:13px;">Открыть ссылку →</a>` : ''}
-                                    ${item.type === 'file' && item.fileType === 'image' ? `<img src="${item.url}" style="max-width:100%;border-radius:8px;margin-top:8px;" />` : ''}
-                                    ${item.type === 'file' && item.fileType === 'audio' ? `<audio controls src="${item.url}" style="width:100%;margin-top:8px;"></audio>` : ''}
-                                    ${item.type === 'file' && item.fileType === 'video' ? `<video controls src="${item.url}" style="max-width:100%;border-radius:8px;margin-top:8px;"></video>` : ''}
-                                    ${item.type === 'file' && item.fileType === 'pdf' ? `<a href="${item.url}" download style="color:#6a9aaa;text-decoration:none;font-size:13px;">Скачать PDF →</a>` : ''}
-                                </div>
-                                <button onclick="deleteItem('${item.id}')" style="background:#3a1a1a;color:#e8edf5;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;margin-left:12px;">Удалить</button>
-                            </div>
-                        </div>
-                    `;
-                });
-            }
+    // Файлы в текущем месте (включая корень раздела)
+    const itemsInCurrentLocation = [];
+    folders.filter(f => f.subject === currentSubject).forEach(f => {
+        // Если currentFolderId === null, берём файлы из "виртуальной" корневой папки
+        // Если currentFolderId задан, берём файлы из этой папки
+        if (f.parentId === currentFolderId && f.items) {
+            f.items.forEach(item => itemsInCurrentLocation.push({ ...item, folderName: f.name, folderId: f.id }));
         }
+    });
+
+    // Для корня раздела: файлы, у которых parentId === null (специальный маркер)
+    // Мы храним файлы в папке с id = subject + '_root'
+    const rootFolderId = currentSubject + '_root';
+    const rootFolder = folders.find(f => f.id === rootFolderId);
+    let rootItems = [];
+    if (currentFolderId === null && rootFolder && rootFolder.items) {
+        rootItems = rootFolder.items.map(item => ({ ...item, folderName: subjects[currentSubject].name, folderId: rootFolderId }));
+    }
+
+    const displayItems = currentFolderId === null ? rootItems : itemsInCurrentLocation;
+
+    if (displayItems.length > 0) {
+        html += `<div>`;
+        html += `<div style="font-size:12px;color:#7a8ba8;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Файлы и ссылки</div>`;
+        displayItems.forEach(item => {
+            html += `
+                <div style="background:#141a24;border:1px solid #1f2838;border-radius:12px;padding:14px 16px;margin-bottom:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:start;">
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:14px;font-weight:500;color:#e8edf5;margin-bottom:4px;word-break:break-word;">
+                                ${getFileIcon(item.type, item.fileType)} ${item.name}
+                            </div>
+                            <div style="font-size:12px;color:#7a8ba8;margin-bottom:6px;">
+                                ${item.type === 'link' ? '🔗 Ссылка' : '📄 Файл'} • ${item.addedDate}
+                            </div>
+                            ${item.comment ? `<div style="font-size:13px;color:#aabbcc;margin-bottom:8px;font-style:italic;">${item.comment}</div>` : ''}
+                            ${item.type === 'link' ? `<a href="${item.url}" target="_blank" style="color:#6a9aaa;text-decoration:none;font-size:13px;">Открыть ссылку →</a>` : ''}
+                            ${item.type === 'file' && item.fileType === 'image' ? `<img src="${item.url}" style="max-width:200px;border-radius:8px;margin-top:8px;cursor:pointer;" onclick="viewImage('${item.url}')" />` : ''}
+                            ${item.type === 'file' && item.fileType === 'audio' ? `<audio controls src="${item.url}" style="width:100%;max-width:400px;margin-top:8px;"></audio>` : ''}
+                            ${item.type === 'file' && item.fileType === 'video' ? `<video controls src="${item.url}" style="max-width:100%;border-radius:8px;margin-top:8px;max-height:300px;"></video>` : ''}
+                            ${item.type === 'file' && item.fileType === 'pdf' ? `<a href="${item.url}" target="_blank" style="color:#6a9aaa;text-decoration:none;font-size:13px;">Открыть PDF →</a>` : ''}
+                        </div>
+                        <button onclick="deleteItem('${item.id}', '${item.folderId}')" style="background:#3a1a1a;color:#e8edf5;border:none;border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;margin-left:12px;flex-shrink:0;">Удалить</button>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+    }
+
+    if (childFolders.length === 0 && displayItems.length === 0) {
+        html += `<div style="text-align:center;padding:40px;color:#7a8ba8;font-size:15px;">
+            Пока пусто. Создай папку или добавь файл/ссылку.
+        </div>`;
     }
 
     container.innerHTML = html;
 }
 
 function getFileIcon(type, fileType) {
-    if (type === 'link') return '';
-    const icons = {
-        pdf: '📕',
-        audio: '🎵',
-        video: '🎬',
-        image: '️',
-        other: '📄'
-    };
-    return icons[fileType] || '📄';
+    if (type === 'link') return '🔗';
+    const icons = { pdf: '📕', audio: '', video: '🎬', image: '🖼️', other: '📄' };
+    return icons[fileType] || '';
+}
+
+function viewImage(url) {
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;cursor:pointer;';
+    modal.onclick = () => modal.remove();
+    const img = document.createElement('img');
+    img.src = url;
+    img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:12px;';
+    modal.appendChild(img);
+    document.body.appendChild(modal);
 }
 
 // ========== ДЕЙСТВИЯ ==========
@@ -181,7 +230,7 @@ function openFolder(id) {
     renderStudies();
 }
 
-function goBack() {
+function goToRoot() {
     currentFolderId = null;
     renderStudies();
 }
@@ -190,7 +239,6 @@ async function createFolder() {
     const name = prompt('Название папки:');
     if (!name || !name.trim()) return;
 
-    const folders = await getFolders();
     const newFolder = {
         id: 'folder_' + Date.now(),
         name: name.trim(),
@@ -204,30 +252,28 @@ async function createFolder() {
 }
 
 async function deleteFolderPrompt(id) {
-    if (!confirm('Удалить папку и все её содержимое?')) return;
+    if (!confirm('Удалить папку и всё её содержимое?')) return;
     await deleteFolder(id);
     renderStudies();
 }
 
-async function addItem() {
-    if (!currentFolderId) {
-        alert('Сначала создай или открой папку');
-        return;
-    }
+async function addItem(type) {
+    // Определяем, куда сохранять: в корень раздела или в текущую папку
+    const targetFolderId = currentFolderId || (currentSubject + '_root');
 
-    const type = prompt('Что добавляем? (1 - файл, 2 - ссылка):');
-    if (!type) return;
-
-    if (type === '2') {
-        const name = prompt('Название:');
+    if (type === 'link') {
+        const name = prompt('Название ссылки:');
         if (!name) return;
         const url = prompt('URL ссылки:');
         if (!url) return;
         const comment = prompt('Комментарий (необязательно):') || '';
 
         const folders = await getFolders();
-        const folder = folders.find(f => f.id === currentFolderId);
-        if (!folder) return;
+        let folder = folders.find(f => f.id === targetFolderId);
+        if (!folder) {
+            folder = { id: targetFolderId, name: subjects[currentSubject].name, subject: currentSubject, parentId: null, items: [] };
+            await saveFolder(folder);
+        }
 
         folder.items = folder.items || [];
         folder.items.push({
@@ -241,7 +287,7 @@ async function addItem() {
 
         await saveFolder(folder);
         renderStudies();
-    } else if (type === '1') {
+    } else if (type === 'file') {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '*/*';
@@ -251,22 +297,21 @@ async function addItem() {
 
             const name = prompt('Название (по умолчанию: ' + file.name + '):', file.name);
             if (!name) return;
-
             const comment = prompt('Комментарий (необязательно):') || '';
 
-            // Определяем тип файла
             let fileType = 'other';
             if (file.type === 'application/pdf') fileType = 'pdf';
             else if (file.type.startsWith('audio/')) fileType = 'audio';
             else if (file.type.startsWith('video/')) fileType = 'video';
             else if (file.type.startsWith('image/')) fileType = 'image';
 
-            // Конвертируем в base64
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const folders = await getFolders();
-                const folder = folders.find(f => f.id === currentFolderId);
-                if (!folder) return;
+                let folder = folders.find(f => f.id === targetFolderId);
+                if (!folder) {
+                    folder = { id: targetFolderId, name: subjects[currentSubject].name, subject: currentSubject, parentId: null, items: [] };
+                }
 
                 folder.items = folder.items || [];
                 folder.items.push({
@@ -288,13 +333,11 @@ async function addItem() {
     }
 }
 
-async function deleteItem(itemId) {
+async function deleteItem(itemId, folderId) {
     if (!confirm('Удалить этот элемент?')) return;
-
     const folders = await getFolders();
-    const folder = folders.find(f => f.id === currentFolderId);
+    const folder = folders.find(f => f.id === folderId);
     if (!folder) return;
-
     folder.items = folder.items.filter(item => item.id !== itemId);
     await saveFolder(folder);
     renderStudies();
@@ -316,34 +359,37 @@ async function exportStudies() {
 
 async function importStudies(file) {
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = async (e) => {
         try {
             const imported = JSON.parse(e.target.result);
             if (!Array.isArray(imported)) {
-                alert('❌ Неверный формат файла');
+                alert(' Неверный формат файла');
                 return;
             }
-            if (confirm(`Импортировать ${imported.length} папок? Текущие данные будут заменены.`)) {
-                // Удаляем старые данные
+            if (confirm(`Импортировать ${imported.length} записей? Текущие данные будут заменены.`)) {
                 const folders = await getFolders();
-                for (const folder of folders) {
-                    await deleteFolder(folder.id);
-                }
-                // Добавляем новые
-                for (const folder of imported) {
-                    await saveFolder(folder);
-                }
+                for (const folder of folders) await deleteFolder(folder.id);
+                for (const folder of imported) await saveFolder(folder);
                 renderStudies();
                 alert('✅ Импорт завершён!');
             }
         } catch (err) {
-            alert('❌ Ошибка чтения файла: ' + err.message);
+            alert(' Ошибка: ' + err.message);
         }
     };
     reader.readAsText(file);
 }
 
-// Запуск
-document.addEventListener('DOMContentLoaded', renderStudies);
+// Делаем функции глобальными
+window.renderStudies = renderStudies;
+window.switchSubject = switchSubject;
+window.openFolder = openFolder;
+window.goToRoot = goToRoot;
+window.createFolder = createFolder;
+window.deleteFolderPrompt = deleteFolderPrompt;
+window.addItem = addItem;
+window.deleteItem = deleteItem;
+window.exportStudies = exportStudies;
+window.importStudies = importStudies;
+window.viewImage = viewImage;

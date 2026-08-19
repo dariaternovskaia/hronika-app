@@ -7,7 +7,11 @@ function showScreen(screenId) {
         b.classList.toggle('active', b.dataset.screen === screenId);
     });
 
-    if (screenId === 'calendar') renderCalendar();
+    if (screenId === 'calendar' && typeof renderCalendar === 'function') renderCalendar();
+    if (screenId === 'studies' && typeof renderStudies === 'function') renderStudies();
+    if (screenId === 'gallery' && typeof renderGallery === 'function') renderGallery();
+    if (screenId === 'books' && typeof renderBooks === 'function') renderBooks();
+    if (screenId === 'movies' && typeof renderMovies === 'function') renderMovies();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -15,15 +19,12 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             const screen = this.dataset.screen;
             if (screen === 'logout') {
-                if (confirm('Выйти из аккаунта?')) {
-                    location.reload();
-                }
+                if (confirm('Выйти из аккаунта?')) location.reload();
                 return;
             }
             showScreen(screen);
         });
     });
 
-    // Показать календарь по умолчанию
     showScreen('calendar');
 });
