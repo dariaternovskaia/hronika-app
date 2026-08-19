@@ -1,5 +1,5 @@
 // ============================================================
-// КАЛЕНДАРЬ (БЕСКОНЕЧНЫЙ СКРОЛЛ, ПОЛОСЫ ПОВЕРХ ДНЕЙ, СТРАНИЧКА ДНЯ)
+// КАЛЕНДАРЬ (БЕСКОНЕЧНЫЙ СКРОЛЛ, ПОЛОСЫ ПОВЕРХ ДНЕЙ, ЛЕГЕНДА)
 // ============================================================
 
 let currentYear = new Date().getFullYear();
@@ -47,15 +47,12 @@ function renderMonth(year, month) {
         gridHtml += `<div class="day-cell other-month"><span class="day-number">${day}</span></div>`;
     }
     
-    // Массив для хранения данных по каждому дню (для полос)
-    const daysData = [];
     for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const dayChallenges = APP.challenges.filter(ch => 
             ch.startDate <= dateStr && (!ch.endDate || ch.endDate >= dateStr)
         );
-        const isEvent = APP.events.some(e => e.date === dateStr);
-        daysData.push({ date: dateStr, day: d, challenges: dayChallenges, isEvent });
+        const isEvent = APP.events && APP.events.some(e => e.date === dateStr);
         
         let dots = '';
         if (dayChallenges.length > 0) {
@@ -79,15 +76,19 @@ function renderMonth(year, month) {
         `;
     }
     
-    // Полоски челленджей — рисуем поверх дней (как наложение)
-    let barsHtml = '';
-    // Собираем уникальные челленджи, активные в этом месяце
+    // ============================================================
+    // ПОЛОСЫ ЧЕЛЛЕНДЖЕЙ — ПОВЕРХ ДНЕЙ, КЛИКАБЕЛЬНЫ
+    // ============================================================
     const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
-    const monthChallenges = APP.challenges.filter(ch => 
-        ch.startDate.slice(0,7) <= monthStr && (!ch.endDate || ch.endDate.slice(0,7) >= monthStr)
-    );
+    const monthChallenges = APP.challenges.filter(ch => {
+        const chStart = ch.startDate || '1970-01-01';
+        const chEnd = ch.endDate || '2999-12-31';
+        const monthStart = `${year}-${String(month+1).padStart(2,'0')}-01`;
+        const monthEnd = `${year}-${String(month+1).padStart(2,'0')}-${daysInMonth}`;
+        return chStart <= monthEnd && chEnd >= monthStart;
+    });
     
-    // Группируем по цвету и имени, чтобы не рисовать дубли
+    // Уникальные челленджи по имени
     const uniqueChallenges = [];
     const seen = new Set();
     for (let ch of monthChallenges) {
@@ -98,32 +99,61 @@ function renderMonth(year, month) {
         }
     }
     
-    // Для каждой полосы вычисляем позицию
+    let barsHtml = '';
     for (let ch of uniqueChallenges) {
         let startDay = 1;
         let endDay = daysInMonth;
-        if (ch.startDate.slice(0,7) === monthStr) {
+        
+        if (ch.startDate && ch.startDate.slice(0,7) === monthStr) {
             startDay = parseInt(ch.startDate.split('-')[2]) || 1;
         }
         if (ch.endDate && ch.endDate.slice(0,7) === monthStr) {
             endDay = parseInt(ch.endDate.split('-')[2]) || daysInMonth;
         }
+        if (ch.startDate && ch.startDate < monthStr + '-01' && (!ch.endDate || ch.endDate > monthStr + '-' + daysInMonth)) {
+            startDay = 1;
+            endDay = daysInMonth;
+        }
+        
         const left = ((startDay - 1) / daysInMonth * 100);
         const width = ((endDay - startDay + 1) / daysInMonth * 100);
+        
+        // Находим индекс челленджа в общем массиве, чтобы передать его в функцию
+        const challengeIndex = APP.challenges.indexOf(ch);
+        
         barsHtml += `
             <div class="challenge-bar" style="
                 position: absolute;
                 top: ${uniqueChallenges.indexOf(ch) * 6 + 2}px;
                 left: ${left}%;
-                width: ${width}%;
+                width: ${Math.max(width, 2)}%;
                 height: 4px;
                 background: ${ch.color};
                 border-radius: 2px;
-                opacity: 0.7;
-                pointer-events: none;
+                opacity: 0.8;
                 z-index: 5;
-            "></div>
+                cursor: pointer;
+            " 
+            onclick="event.stopPropagation(); openChallengeModal(${challengeIndex})"
+            title="${ch.name}: ${ch.startDate || '?'} — ${ch.endDate || 'бесконечно'}"></div>
         `;
+    }
+    
+    // ============================================================
+    // ЛЕГЕНДА ПОД МЕСЯЦЕМ
+    // ============================================================
+    let legendHtml = '';
+    if (uniqueChallenges.length > 0) {
+        legendHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;padding:4px 0;border-top:1px solid #1a2230;">';
+        for (let ch of uniqueChallenges) {
+            legendHtml += `
+                <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:#7a8ba8;cursor:pointer;" onclick="openChallengeModal(${APP.challenges.indexOf(ch)})">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${ch.color};"></span>
+                    ${ch.name.length > 20 ? ch.name.slice(0,20) + '…' : ch.name}
+                </span>
+            `;
+        }
+        legendHtml += '</div>';
     }
     
     return `
@@ -133,12 +163,85 @@ function renderMonth(year, month) {
                 ${gridHtml}
                 ${barsHtml}
             </div>
+            ${legendHtml}
         </div>
     `;
 }
 
 // ============================================================
-// СТРАНИЧКА ДНЯ (МОДАЛКА)
+// МОДАЛКА ЧЕЛЛЕНДЖА (ПО КЛИКУ НА ПОЛОСУ)
+// ============================================================
+
+function openChallengeModal(index) {
+    const ch = APP.challenges[index];
+    if (!ch) return;
+    
+    showModal('Челлендж', `
+        <div style="margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <span style="display:inline-block;width:20px;height:20px;border-radius:4px;background:${ch.color};"></span>
+                <h3 style="font-size:18px;font-weight:500;color:#c8d5e5;margin:0;">${ch.name}</h3>
+            </div>
+            <div style="font-size:14px;color:#7a8ba8;">
+                <div>📅 ${ch.startDate || 'не указана'} — ${ch.endDate || 'бесконечно'}</div>
+                ${ch.tempo ? `<div>⏱ Темп: ${ch.tempo} ${ch.unit || 'уроков'}</div>` : ''}
+            </div>
+        </div>
+        <hr style="border-color:#1a2230;margin:12px 0;">
+        <label>Название</label>
+        <input type="text" id="editChallengeName" value="${ch.name}">
+        <label>Дата начала</label>
+        <input type="date" id="editChallengeStart" value="${ch.startDate || ''}">
+        <label>Дата окончания</label>
+        <input type="date" id="editChallengeEnd" value="${ch.endDate || ''}">
+        <label>Цвет</label>
+        <input type="color" id="editChallengeColor" value="${ch.color || '#e74c3c'}">
+        <label>Темп</label>
+        <input type="number" id="editChallengeTempo" value="${ch.tempo || ''}" placeholder="Количество за раз">
+        <label>Единица темпа</label>
+        <select id="editChallengeUnit">
+            <option value="уроков" ${ch.unit === 'уроков' ? 'selected' : ''}>уроков</option>
+            <option value="страниц" ${ch.unit === 'страниц' ? 'selected' : ''}>страниц</option>
+            <option value="лекций" ${ch.unit === 'лекций' ? 'selected' : ''}>лекций</option>
+        </select>
+        <div class="modal-actions" style="justify-content:space-between;">
+            <button class="btn-danger" onclick="deleteChallenge(${index})" style="background:#3a1a1a;color:#d46a6a;padding:8px 20px;border-radius:12px;border:none;cursor:pointer;">Удалить</button>
+            <div>
+                <button class="btn-secondary" onclick="closeModal()">Отмена</button>
+                <button class="btn-primary" onclick="confirmEditChallenge(${index})">Сохранить</button>
+            </div>
+        </div>
+    `);
+}
+
+function confirmEditChallenge(index) {
+    const name = document.getElementById('editChallengeName').value.trim();
+    if (!name) return showToast('Введите название', 'error');
+    APP.challenges[index] = {
+        name: name,
+        startDate: document.getElementById('editChallengeStart').value || '',
+        endDate: document.getElementById('editChallengeEnd').value || '',
+        color: document.getElementById('editChallengeColor').value || '#e74c3c',
+        tempo: document.getElementById('editChallengeTempo').value || '',
+        unit: document.getElementById('editChallengeUnit').value || 'уроков'
+    };
+    saveAppState();
+    closeModal();
+    renderCalendar();
+    showToast('Челлендж обновлён');
+}
+
+function deleteChallenge(index) {
+    if (!confirm('Удалить челлендж навсегда?')) return;
+    APP.challenges.splice(index, 1);
+    saveAppState();
+    closeModal();
+    renderCalendar();
+    showToast('Челлендж удалён');
+}
+
+// ============================================================
+// СТРАНИЧКА ДНЯ (ПО КЛИКУ НА ДЕНЬ)
 // ============================================================
 
 function openDayModal(dateStr) {
@@ -154,18 +257,15 @@ function openDayModal(dateStr) {
         'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'];
     title.textContent = `${day} ${monthNames[month-1]} ${year}`;
     
-    // Получаем данные дня
     if (!APP.dayData[dateStr]) {
         APP.dayData[dateStr] = { todos: [], notes: '', dayFiles: [] };
     }
     const dayData = APP.dayData[dateStr];
     
-    // Активные челленджи на эту дату
     const activeChallenges = APP.challenges.filter(ch => 
         ch.startDate <= dateStr && (!ch.endDate || ch.endDate >= dateStr)
     );
     
-    // Генерируем рекомендации (на основе темпа)
     const recommendations = generateRecommendations(dateStr, activeChallenges);
     
     let html = `
@@ -186,7 +286,7 @@ function openDayModal(dateStr) {
             }
         </div>
         
-        <!-- Список дел -->
+        <!-- Дела -->
         <div style="margin-bottom:16px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <h4 style="color:#7a8ba8;font-size:14px;">Дела</h4>
@@ -217,7 +317,7 @@ function openDayModal(dateStr) {
             <textarea id="dayNotes" style="width:100%;min-height:80px;padding:10px 14px;border-radius:10px;border:1px solid #1f2838;background:#0b0e14;color:#e8edf5;font-size:14px;font-family:inherit;resize:vertical;outline:none;">${dayData.notes || ''}</textarea>
         </div>
         
-        <!-- Файлы дня -->
+        <!-- Файлы -->
         <div style="margin-bottom:16px;">
             <h4 style="color:#7a8ba8;font-size:14px;margin-bottom:4px;">Файлы дня</h4>
             <div id="dayFilesList" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
@@ -232,30 +332,13 @@ function openDayModal(dateStr) {
                 }
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button onclick="uploadDayFile('${dateStr}')" style="padding:6px 16px;border-radius:20px;border:1px solid #2a3344;background:transparent;color:#aabbcc;cursor:pointer;font-size:13px;">Загрузить файл ко дню</button>
-                <button onclick="uploadDayPhoto('${dateStr}')" style="padding:6px 16px;border-radius:20px;border:1px solid #2a3344;background:transparent;color:#aabbcc;cursor:pointer;font-size:13px;">Загрузить фото ко дню</button>
+                <button onclick="uploadDayFile('${dateStr}')" style="padding:6px 16px;border-radius:20px;border:1px solid #2a3344;background:transparent;color:#aabbcc;cursor:pointer;font-size:13px;">Загрузить файл</button>
+                <button onclick="uploadDayPhoto('${dateStr}')" style="padding:6px 16px;border-radius:20px;border:1px solid #2a3344;background:transparent;color:#aabbcc;cursor:pointer;font-size:13px;">Загрузить фото</button>
             </div>
         </div>
         
-        <!-- Активные челленджи -->
-        <div style="margin-bottom:16px;">
-            <h4 style="color:#7a8ba8;font-size:14px;margin-bottom:4px;">Активные челленджи</h4>
-            ${activeChallenges.length > 0 ? 
-                activeChallenges.map(ch => `
-                    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;">
-                        <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${ch.color};"></span>
-                        <span>${ch.name}</span>
-                        <span style="font-size:12px;color:#5a6a7a;">${ch.startDate} — ${ch.endDate || 'бесконечно'}</span>
-                        <span style="font-size:12px;color:#5a6a7a;">Темп: ${ch.tempo || '—'} ${ch.unit || ''}</span>
-                    </div>
-                `).join('') : 
-                '<div class="text-muted" style="font-size:13px;">Нет активных челленджей</div>'
-            }
-        </div>
-        
-        <!-- Кнопка сохранения -->
         <div class="modal-actions">
-            <button class="btn-secondary" onclick="saveDayData('${dateStr}')">Сохранить</button>
+            <button class="btn-secondary" onclick="saveDayData('${dateStr}')">Сохранить заметки</button>
             <button class="btn-secondary" onclick="closeDayModal()">Закрыть</button>
         </div>
     `;
@@ -269,7 +352,7 @@ function closeDayModal() {
 }
 
 // ============================================================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ СТРАНИЧКИ ДНЯ
+// ОСТАЛЬНЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ)
 // ============================================================
 
 function generateRecommendations(dateStr, activeChallenges) {
@@ -322,7 +405,7 @@ function addTodo(dateStr) {
     showModal('Добавить дело', `
         <label>Текст дела</label>
         <input type="text" id="newTodoText" placeholder="Что нужно сделать?" autofocus>
-        <label>Челлендж (цвет подхватится автоматически)</label>
+        <label>Челлендж</label>
         <select id="newTodoChallenge">
             <option value="">—</option>
             ${APP.challenges.map(ch => `<option value="${ch.name}" data-color="${ch.color || '#2a3344'}">${ch.name}</option>`).join('')}
