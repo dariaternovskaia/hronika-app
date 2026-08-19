@@ -8,7 +8,7 @@ if (challenges.length === 0) {
             name: 'Английский каждый день',
             comment: '30 минут чтения + 10 новых слов',
             startDate: { day: 3, month: 0, year: 2026 },
-            endDate: { day: 25, month: 0, year: 2026 },
+            endDate: { day: 27, month: 5, year: 2026 },
             color: '#fde68a'
         },
         {
@@ -131,6 +131,27 @@ function renderChallengeBars() {
         container.innerHTML = '';
         const totalDays = daysInMonth(m, year);
 
+        // Получаем сетку дней для расчёта реальных размеров
+        const daysGrid = container.previousElementSibling;
+        if (!daysGrid) continue;
+
+        const dayCells = daysGrid.querySelectorAll('.day-cell');
+        if (dayCells.length === 0) continue;
+
+        // Измеряем реальную ширину одной ячейки и gap
+        const firstCell = dayCells[0];
+        const cellRect = firstCell.getBoundingClientRect();
+        const cellWidth = cellRect.width;
+        const gap = 2;
+        const cellStep = cellWidth + gap;
+        const gridWidth = totalDays * cellWidth + (totalDays - 1) * gap;
+
+        // Устанавливаем контейнеру ту же ширину, что у сетки
+        container.style.position = 'relative';
+        container.style.width = gridWidth + 'px';
+        container.style.height = 'auto';
+        container.style.overflow = 'visible';
+
         challenges.forEach(ch => {
             const sM = ch.startDate.month;
             const eM = ch.endDate ? ch.endDate.month : 11;
@@ -140,6 +161,11 @@ function renderChallengeBars() {
             let sDay = (m === sM) ? ch.startDate.day : 1;
             let eDay = (m === eM) ? (ch.endDate ? ch.endDate.day : totalDays) : totalDays;
 
+            // Определяем, обрезается ли челлендж справа (продолжается в след. месяце)
+            const isClippedRight = (m === eM && ch.endDate) ? false : (m < eM);
+            // Определяем, обрезается ли слева (начался в пред. месяце)
+            const isClippedLeft = (m === sM && ch.startDate.day > 1) ? false : (m > sM);
+
             const bar = document.createElement('div');
             bar.className = 'challenge-bar';
             bar.style.backgroundColor = ch.color || '#cbd5e1';
@@ -147,11 +173,24 @@ function renderChallengeBars() {
             bar.title = ch.comment || ch.name;
             bar.onclick = () => openChallengeModal(ch.id);
 
-            const startPercent = ((sDay - 1) / totalDays) * 100;
-            const widthPercent = ((eDay - sDay + 1) / totalDays) * 100;
+            // Абсолютное позиционирование в пикселях
+            bar.style.position = 'absolute';
+            const left = (sDay - 1) * cellStep;
+            const width = (eDay - sDay + 1) * cellWidth + (eDay - sDay) * gap;
+            bar.style.left = left + 'px';
+            bar.style.width = width + 'px';
 
-            bar.style.marginLeft = startPercent + '%';
-            bar.style.width = widthPercent + '%';
+            // "Рубленый" конец — если челлендж продолжается за месяц
+            if (isClippedRight) {
+                bar.style.borderTopRightRadius = '0';
+                bar.style.borderBottomRightRadius = '0';
+                bar.style.borderRight = '2px dashed rgba(0,0,0,0.3)';
+            }
+            if (isClippedLeft) {
+                bar.style.borderTopLeftRadius = '0';
+                bar.style.borderBottomLeftRadius = '0';
+                bar.style.borderLeft = '2px dashed rgba(0,0,0,0.3)';
+            }
 
             container.appendChild(bar);
         });
