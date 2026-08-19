@@ -122,7 +122,7 @@ function renderCalendar() {
     renderChallengeBars();
 }
 
-// ========== ОТРИСОВКА ПОЛОСОК ==========
+// ========== ОТРИСОВКА ПОЛОСОК (без наложений) ==========
 function renderChallengeBars() {
     for (let m = 0; m < 12; m++) {
         const container = document.getElementById(`bars-${m}`);
@@ -152,6 +152,8 @@ function renderChallengeBars() {
         container.style.height = 'auto';
         container.style.overflow = 'visible';
 
+        // Собираем челленджи для этого месяца
+        const monthChallenges = [];
         challenges.forEach(ch => {
             const sM = ch.startDate.month;
             const eM = ch.endDate ? ch.endDate.month : 11;
@@ -161,11 +163,54 @@ function renderChallengeBars() {
             let sDay = (m === sM) ? ch.startDate.day : 1;
             let eDay = (m === eM) ? (ch.endDate ? ch.endDate.day : totalDays) : totalDays;
 
-            // Определяем, обрезается ли челлендж справа (продолжается в след. месяце)
-            const isClippedRight = (m === eM && ch.endDate) ? false : (m < eM);
-            // Определяем, обрезается ли слева (начался в пред. месяце)
-            const isClippedLeft = (m === sM && ch.startDate.day > 1) ? false : (m > sM);
+            monthChallenges.push({
+                challenge: ch,
+                sDay: sDay,
+                eDay: eDay,
+                isClippedRight: (m === eM && ch.endDate) ? false : (m < eM),
+                isClippedLeft: (m === sM && ch.startDate.day > 1) ? false : (m > sM)
+            });
+        });
 
+        // Алгоритм размещения без наложений (вертикальный стек)
+        const rows = []; // каждая строка — массив {sDay, eDay, bar}
+        const barHeight = 26;
+        const rowGap = 4;
+
+        monthChallenges.forEach(item => {
+            let placed = false;
+            
+            // Пытаемся найти свободную строку
+            for (let r = 0; r < rows.length; r++) {
+                let overlap = false;
+                for (const existing of rows[r]) {
+                    // Проверяем пересечение
+                    if (item.sDay <= existing.eDay && item.eDay >= existing.sDay) {
+                        overlap = true;
+                        break;
+                    }
+                }
+                
+                if (!overlap) {
+                    rows[r].push(item);
+                    placeBar(item, r);
+                    placed = true;
+                    break;
+                }
+            }
+            
+            // Если не нашли свободную строку — создаём новую
+            if (!placed) {
+                rows.push([item]);
+                placeBar(item, rows.length - 1);
+            }
+        });
+
+        // Устанавливаем высоту контейнера
+        container.style.height = (rows.length * (barHeight + rowGap)) + 'px';
+
+        function placeBar(item, rowIndex) {
+            const ch = item.challenge;
             const bar = document.createElement('div');
             bar.className = 'challenge-bar';
             bar.style.backgroundColor = ch.color || '#cbd5e1';
@@ -175,25 +220,26 @@ function renderChallengeBars() {
 
             // Абсолютное позиционирование в пикселях
             bar.style.position = 'absolute';
-            const left = (sDay - 1) * cellStep;
-            const width = (eDay - sDay + 1) * cellWidth + (eDay - sDay) * gap;
+            const left = (item.sDay - 1) * cellStep;
+            const width = (item.eDay - item.sDay + 1) * cellWidth + (item.eDay - item.sDay) * gap;
             bar.style.left = left + 'px';
+            bar.style.top = (rowIndex * (barHeight + rowGap)) + 'px';
             bar.style.width = width + 'px';
 
-            // "Рубленый" конец — если челлендж продолжается за месяц
-            if (isClippedRight) {
+            // "Рубленый" конец
+            if (item.isClippedRight) {
                 bar.style.borderTopRightRadius = '0';
                 bar.style.borderBottomRightRadius = '0';
                 bar.style.borderRight = '2px dashed rgba(0,0,0,0.3)';
             }
-            if (isClippedLeft) {
+            if (item.isClippedLeft) {
                 bar.style.borderTopLeftRadius = '0';
                 bar.style.borderBottomLeftRadius = '0';
                 bar.style.borderLeft = '2px dashed rgba(0,0,0,0.3)';
             }
 
             container.appendChild(bar);
-        });
+        }
     }
 }
 

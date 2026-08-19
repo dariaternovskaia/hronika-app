@@ -117,6 +117,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    overflow-x: auto;
 }
 
 .days-grid {
@@ -152,7 +153,7 @@ body {
     outline-offset: -2px;
 }
 
-/* Полоски челленджей (ПОД днями, не перекрывают) */
+/* Полоски челленджей (ПОД днями, без наложений) */
 .challenge-bars {
     display: block;
     min-height: 30px;
