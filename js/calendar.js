@@ -1,6 +1,20 @@
 // ========== ДАННЫЕ ЧЕЛЛЕНДЖЕЙ ==========
 let challenges = JSON.parse(localStorage.getItem('hronika_challenges') || '[]');
 
+// Миграция старых данных
+challenges = challenges.map(ch => {
+    if (!ch.content) {
+        ch.content = { amount: 0, unit: 'pages', customUnit: '', note: '' };
+    }
+    if (!ch.norm) {
+        ch.norm = { amount: 0, unit: 'pages' };
+    }
+    if (!ch.frequency) {
+        ch.frequency = { type: 'daily', days: [] };
+    }
+    return ch;
+});
+
 if (challenges.length === 0) {
     challenges = [
         {
@@ -83,11 +97,6 @@ const unitNames = {
     tasks: 'уроки',
     exercises: 'задания',
     custom: 'своё'
-};
-const frequencyNames = {
-    daily: 'Каждый день',
-    everyOtherDay: 'Через день',
-    weekly: 'По дням недели'
 };
 
 function daysInMonth(m, y) {
@@ -197,7 +206,8 @@ function renderChallengeBars() {
 
         const rows = [];
         const barHeight = 26;
-        const rowGap = 4;
+        const labelHeight = 16;
+        const rowGap = 8;
 
         monthChallenges.forEach(item => {
             let placed = false;
@@ -225,17 +235,30 @@ function renderChallengeBars() {
             }
         });
 
-        container.style.height = (rows.length * (barHeight + rowGap)) + 'px';
+        container.style.height = (rows.length * (barHeight + labelHeight + rowGap)) + 'px';
 
         function placeBar(item, rowIndex) {
             const ch = item.challenge;
+            
+            // Название НАД полоской
+            const label = document.createElement('div');
+            label.style.position = 'absolute';
+            label.style.left = ((item.sDay - 1) * cellStep) + 'px';
+            label.style.top = (rowIndex * (barHeight + labelHeight + rowGap)) + 'px';
+            label.style.fontSize = '10px';
+            label.style.color = '#7a8ba8';
+            label.style.fontWeight = '500';
+            label.style.whiteSpace = 'nowrap';
+            label.style.overflow = 'hidden';
+            label.style.textOverflow = 'ellipsis';
+            label.style.maxWidth = ((item.eDay - item.sDay + 1) * cellStep) + 'px';
+            label.textContent = ch.name;
+            container.appendChild(label);
+
+            // Полоска
             const bar = document.createElement('div');
             bar.className = 'challenge-bar';
             bar.style.backgroundColor = ch.color || '#cbd5e1';
-            
-            // Показываем норму на полоске
-            const unitLabel = ch.content.unit === 'custom' ? ch.content.customUnit : unitNames[ch.content.unit] || '';
-            bar.textContent = `${ch.name} (${ch.norm.amount} ${unitLabel})`;
             bar.title = ch.comment || ch.name;
             bar.onclick = () => openChallengeModal(ch.id);
 
@@ -243,7 +266,7 @@ function renderChallengeBars() {
             const left = (item.sDay - 1) * cellStep;
             const width = (item.eDay - item.sDay + 1) * cellWidth + (item.eDay - item.sDay) * gap;
             bar.style.left = left + 'px';
-            bar.style.top = (rowIndex * (barHeight + rowGap)) + 'px';
+            bar.style.top = (rowIndex * (barHeight + labelHeight + rowGap) + labelHeight) + 'px';
             bar.style.width = width + 'px';
 
             if (item.isClippedRight) {
@@ -272,7 +295,6 @@ function openChallengeModal(id = null) {
     const comment = ch ? ch.comment : '';
     const color = ch ? ch.color : '#fde68a';
     
-    // Новые поля
     const contentAmount = ch && ch.content ? ch.content.amount : '';
     const contentUnit = ch && ch.content ? ch.content.unit : 'pages';
     const contentCustomUnit = ch && ch.content ? ch.content.customUnit : '';
@@ -313,7 +335,6 @@ function openChallengeModal(id = null) {
                     </div>
                 </div>
                 
-                <!-- СОДЕРЖАНИЕ -->
                 <div style="background:#0b0e14;padding:12px;border-radius:10px;border:1px solid #1f2838;margin-bottom:12px;">
                     <label style="display:block;font-size:13px;color:#7a8ba8;margin-bottom:8px;font-weight:600;">Содержание</label>
                     <div style="display:grid;grid-template-columns:80px 1fr;gap:8px;margin-bottom:8px;">
@@ -338,7 +359,6 @@ function openChallengeModal(id = null) {
                     </div>
                 </div>
                 
-                <!-- НОРМА -->
                 <div style="background:#0b0e14;padding:12px;border-radius:10px;border:1px solid #1f2838;margin-bottom:12px;">
                     <label style="display:block;font-size:13px;color:#7a8ba8;margin-bottom:8px;font-weight:600;">Норма за один подход</label>
                     <div style="display:grid;grid-template-columns:80px 1fr;gap:8px;">
@@ -357,7 +377,6 @@ function openChallengeModal(id = null) {
                     </div>
                 </div>
                 
-                <!-- ЧАСТОТА -->
                 <div style="background:#0b0e14;padding:12px;border-radius:10px;border:1px solid #1f2838;margin-bottom:12px;">
                     <label style="display:block;font-size:13px;color:#7a8ba8;margin-bottom:8px;font-weight:600;">Частота подходов</label>
                     <select id="freqType" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #1f2838;background:#141a24;color:#e8edf5;font-size:13px;font-family:inherit;margin-bottom:8px;">
@@ -438,7 +457,6 @@ function openChallengeModal(id = null) {
             return;
         }
 
-        // Собираем новые поля
         const contentUnit = document.getElementById('contentUnit').value;
         const contentCustomUnit = contentUnit === 'custom' ? document.getElementById('contentCustomUnit').value.trim() : '';
         
