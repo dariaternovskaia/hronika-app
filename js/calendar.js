@@ -9,7 +9,7 @@ challenges = challenges.map(ch => {
         needsSave = true;
     }
     if (!ch.norm) {
-        ch.norm = { amount: 0, unit: 'pages' };
+        ch.norm = { amount: 0, unit: ch.content.unit }; // Берём из содержания!
         needsSave = true;
     }
     if (!ch.frequency) {
@@ -22,22 +22,10 @@ if (needsSave) {
     localStorage.setItem('hronika_challenges', JSON.stringify(challenges));
 }
 
-// Если челленджей нет — показываем подсказку
-if (challenges.length === 0) {
-    console.log('️ Нет челленджей. Нажми "+ Добавить челлендж" чтобы создать первый.');
-}
-
 const year = 2026;
 const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
                     'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-const unitNames = {
-    pages: 'страницы',
-    lessons: 'занятия',
-    tasks: 'уроки',
-    exercises: 'задания',
-    custom: 'своё'
-};
 
 function daysInMonth(m, y) {
     return new Date(y, m + 1, 0).getDate();
@@ -51,8 +39,11 @@ function saveChallenges() {
     localStorage.setItem('hronika_challenges', JSON.stringify(challenges));
 }
 
+// Получить эффективную дату окончания
 function getEffectiveEndDate(ch) {
     if (ch.endDate) return ch.endDate;
+    
+    // Без даты окончания — показываем до сегодня
     const today = new Date();
     if (today.getFullYear() !== year) {
         return { day: 31, month: 11, year: year };
@@ -64,6 +55,41 @@ function getEffectiveEndDate(ch) {
     };
 }
 
+// ========== ЭКСПОРТ/ИМПОРТ ==========
+function exportChallenges() {
+    const dataStr = JSON.stringify(challenges, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `hronika-challenges-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    alert('✅ Файл сохранён! Загрузи его в TeraBox.');
+}
+
+function importChallenges(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (!Array.isArray(imported)) {
+                alert('❌ Неверный формат файла');
+                return;
+            }
+            if (confirm(`Импортировать ${imported.length} челленджей? Текущие данные будут заменены.`)) {
+                challenges = imported;
+                saveChallenges();
+                renderCalendar();
+                alert('✅ Импорт завершён!');
+            }
+        } catch (err) {
+            alert('❌ Ошибка чтения файла: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
 // ========== ОТРИСОВКА КАЛЕНДАРЯ ==========
 function renderCalendar() {
     const container = document.getElementById('calendar');
@@ -71,7 +97,12 @@ function renderCalendar() {
 
     let html = '';
 
-    html += `<div style="margin-bottom: 16px; display: flex; justify-content: flex-end;">
+    html += `<div style="margin-bottom: 16px; display: flex; justify-content: flex-end; gap: 8px;">
+        <button id="exportBtn" style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">📥 Экспорт</button>
+        <label style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">
+             Импорт
+            <input type="file" id="importFile" accept=".json" style="display:none;" />
+        </label>
         <button id="addChallengeBtn" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;">+ Добавить челлендж</button>
     </div>`;
 
@@ -114,6 +145,16 @@ function renderCalendar() {
     const addBtn = document.getElementById('addChallengeBtn');
     if (addBtn) addBtn.addEventListener('click', () => openChallengeModal());
 
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) exportBtn.addEventListener('click', exportChallenges);
+
+    const importFile = document.getElementById('importFile');
+    if (importFile) importFile.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            importChallenges(e.target.files[0]);
+        }
+    });
+
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             renderChallengeBars();
@@ -123,7 +164,7 @@ function renderCalendar() {
 
 // ========== ОТРИСОВКА ПОЛОСОК ==========
 function renderChallengeBars() {
-    console.log('📊 renderChallengeBars вызвана, челленджей:', challenges.length);
+    console.log('📊 renderChallengeBars, челленджей:', challenges.length);
     
     for (let m = 0; m < 12; m++) {
         const container = document.getElementById(`bars-${m}`);
@@ -141,10 +182,7 @@ function renderChallengeBars() {
         const firstCell = dayCells[0];
         const cellRect = firstCell.getBoundingClientRect();
         const cellWidth = cellRect.width;
-        if (cellWidth === 0) {
-            console.warn('⚠️ cellWidth = 0, элемент не отрисован');
-            continue;
-        }
+        if (cellWidth === 0) continue;
 
         const gap = 2;
         const cellStep = cellWidth + gap;
@@ -156,20 +194,33 @@ function renderChallengeBars() {
         container.style.overflow = 'visible';
 
         const monthChallenges = [];
+        
         challenges.forEach(ch => {
-            if (!ch.startDate) return;
+            if (!ch.startDate) {
+                console.warn('⚠️ Челлендж без startDate:', ch);
+                return;
+            }
 
             const sM = ch.startDate.month;
             const effEnd = getEffectiveEndDate(ch);
             const eM = effEnd.month;
 
-            if (m < sM || m > eM) return;
+            console.log(`Челлендж "${ch.name}": start=${sM}, end=${eM}, текущий месяц=${m}`);
+
+            // Проверяем, попадает ли челлендж в этот месяц
+            if (m < sM || m > eM) {
+                console.log(`  ❌ Не попадает`);
+                return;
+            }
 
             let sDay = (m === sM) ? ch.startDate.day : 1;
             let eDay = (m === eM) ? effEnd.day : totalDays;
 
-            const isClippedRight = ch.endDate === null;
-            const isClippedLeft = (m === sM && ch.startDate.day > 1) ? false : (m > sM);
+            // Если нет даты окончания — правый край рубленый
+            const isClippedRight = (ch.endDate === null);
+            const isClippedLeft = (m > sM);
+
+            console.log(`  ✅ Добавлен: дни ${sDay}-${eDay}, clippedRight=${isClippedRight}`);
 
             monthChallenges.push({
                 challenge: ch,
@@ -180,7 +231,7 @@ function renderChallengeBars() {
             });
         });
 
-        console.log(`📅 Месяц ${m}, челленджей для отображения:`, monthChallenges.length);
+        console.log(`Месяц ${m}, челленджей для отображения:`, monthChallenges.length);
 
         const rows = [];
         const barHeight = 26;
@@ -218,6 +269,7 @@ function renderChallengeBars() {
         function placeBar(item, rowIndex) {
             const ch = item.challenge;
 
+            // Название НАД полоской
             const label = document.createElement('div');
             label.style.position = 'absolute';
             label.style.left = ((item.sDay - 1) * cellStep) + 'px';
@@ -232,6 +284,7 @@ function renderChallengeBars() {
             label.textContent = ch.name;
             container.appendChild(label);
 
+            // Полоска
             const bar = document.createElement('div');
             bar.className = 'challenge-bar';
             bar.style.backgroundColor = ch.color || '#cbd5e1';
@@ -257,7 +310,6 @@ function renderChallengeBars() {
             }
 
             container.appendChild(bar);
-            console.log('✅ Полоска создана:', ch.name);
         }
     }
 }
@@ -278,6 +330,7 @@ function openChallengeModal(id = null) {
     const contentNote = ch && ch.content ? ch.content.note : '';
 
     const normAmount = ch && ch.norm ? ch.norm.amount : '';
+    // ВАЖНО: по умолчанию норма берёт единицу из содержания
     const normUnit = ch && ch.norm ? ch.norm.unit : contentUnit;
 
     const freqType = ch && ch.frequency ? ch.frequency.type : 'daily';
@@ -410,6 +463,7 @@ function openChallengeModal(id = null) {
 
     contentUnitSelect.addEventListener('change', function() {
         customUnitContainer.style.display = this.value === 'custom' ? 'block' : 'none';
+        // ИСПРАВЛЕНИЕ: автоподстановка единицы в норму
         normUnitSelect.value = this.value;
     });
 
