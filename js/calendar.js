@@ -1,7 +1,7 @@
 // ========== ДАННЫЕ ЧЕЛЛЕНДЖЕЙ ==========
 let challenges = JSON.parse(localStorage.getItem('hronika_challenges') || '[]');
 
-// Миграция старых данных + сохранение
+// Миграция старых данных
 let needsSave = false;
 challenges = challenges.map(ch => {
     if (!ch.content) {
@@ -22,76 +22,9 @@ if (needsSave) {
     localStorage.setItem('hronika_challenges', JSON.stringify(challenges));
 }
 
+// Если челленджей нет — показываем подсказку
 if (challenges.length === 0) {
-    challenges = [
-        {
-            id: 'ch1',
-            name: 'Английский каждый день',
-            comment: '30 минут чтения + 10 новых слов',
-            startDate: { day: 3, month: 0, year: 2026 },
-            endDate: { day: 27, month: 5, year: 2026 },
-            content: { amount: 30, unit: 'pages', customUnit: '', note: 'Учебник Murphy, приложение Duolingo' },
-            norm: { amount: 30, unit: 'pages' },
-            frequency: { type: 'daily', days: [] },
-            color: '#fde68a'
-        },
-        {
-            id: 'ch2',
-            name: 'Утренняя зарядка',
-            comment: '15 минут растяжки',
-            startDate: { day: 10, month: 0, year: 2026 },
-            endDate: { day: 28, month: 0, year: 2026 },
-            content: { amount: 15, unit: 'custom', customUnit: 'минут', note: 'YouTube канал "Йога с Адриен"' },
-            norm: { amount: 15, unit: 'custom' },
-            frequency: { type: 'daily', days: [] },
-            color: '#bbf7d0'
-        },
-        {
-            id: 'ch3',
-            name: 'Медитация',
-            comment: '10 минут осознанности',
-            startDate: { day: 1, month: 1, year: 2026 },
-            endDate: { day: 20, month: 1, year: 2026 },
-            content: { amount: 10, unit: 'custom', customUnit: 'минут', note: 'Приложение Headspace' },
-            norm: { amount: 10, unit: 'custom' },
-            frequency: { type: 'daily', days: [] },
-            color: '#c7d2fe'
-        },
-        {
-            id: 'ch4',
-            name: 'Чтение книг',
-            comment: '30 страниц в день',
-            startDate: { day: 5, month: 1, year: 2026 },
-            endDate: { day: 26, month: 1, year: 2026 },
-            content: { amount: 30, unit: 'pages', customUnit: '', note: 'Список: "1984", "Мастер и Маргарита"' },
-            norm: { amount: 30, unit: 'pages' },
-            frequency: { type: 'daily', days: [] },
-            color: '#fecaca'
-        },
-        {
-            id: 'ch5',
-            name: 'Прогулка 10k шагов',
-            comment: 'Ежедневная прогулка',
-            startDate: { day: 8, month: 2, year: 2026 },
-            endDate: { day: 30, month: 2, year: 2026 },
-            content: { amount: 10000, unit: 'custom', customUnit: 'шагов', note: 'Фитнес-браслет' },
-            norm: { amount: 10000, unit: 'custom' },
-            frequency: { type: 'daily', days: [] },
-            color: '#fed7aa'
-        },
-        {
-            id: 'ch6',
-            name: 'Испанский с нуля',
-            comment: 'Duolingo + произношение',
-            startDate: { day: 1, month: 3, year: 2026 },
-            endDate: { day: 18, month: 3, year: 2026 },
-            content: { amount: 1, unit: 'lessons', customUnit: '', note: 'Курс на Coursera' },
-            norm: { amount: 1, unit: 'lessons' },
-            frequency: { type: 'daily', days: [] },
-            color: '#bae6fd'
-        }
-    ];
-    localStorage.setItem('hronika_challenges', JSON.stringify(challenges));
+    console.log('️ Нет челленджей. Нажми "+ Добавить челлендж" чтобы создать первый.');
 }
 
 const year = 2026;
@@ -118,6 +51,19 @@ function saveChallenges() {
     localStorage.setItem('hronika_challenges', JSON.stringify(challenges));
 }
 
+function getEffectiveEndDate(ch) {
+    if (ch.endDate) return ch.endDate;
+    const today = new Date();
+    if (today.getFullYear() !== year) {
+        return { day: 31, month: 11, year: year };
+    }
+    return {
+        day: today.getDate(),
+        month: today.getMonth(),
+        year: today.getFullYear()
+    };
+}
+
 // ========== ОТРИСОВКА КАЛЕНДАРЯ ==========
 function renderCalendar() {
     const container = document.getElementById('calendar');
@@ -128,6 +74,12 @@ function renderCalendar() {
     html += `<div style="margin-bottom: 16px; display: flex; justify-content: flex-end;">
         <button id="addChallengeBtn" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;">+ Добавить челлендж</button>
     </div>`;
+
+    if (challenges.length === 0) {
+        html += `<div style="text-align:center;padding:40px;color:#7a8ba8;font-size:16px;">
+            📭 Пока нет челленджей. Нажми "+ Добавить челлендж" чтобы создать первый.
+        </div>`;
+    }
 
     for (let m = 0; m < 12; m++) {
         const totalDays = daysInMonth(m, year);
@@ -162,7 +114,6 @@ function renderCalendar() {
     const addBtn = document.getElementById('addChallengeBtn');
     if (addBtn) addBtn.addEventListener('click', () => openChallengeModal());
 
-    // Ждём отрисовки DOM перед расчётом размеров
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             renderChallengeBars();
@@ -172,6 +123,8 @@ function renderCalendar() {
 
 // ========== ОТРИСОВКА ПОЛОСОК ==========
 function renderChallengeBars() {
+    console.log('📊 renderChallengeBars вызвана, челленджей:', challenges.length);
+    
     for (let m = 0; m < 12; m++) {
         const container = document.getElementById(`bars-${m}`);
         if (!container) continue;
@@ -188,10 +141,11 @@ function renderChallengeBars() {
         const firstCell = dayCells[0];
         const cellRect = firstCell.getBoundingClientRect();
         const cellWidth = cellRect.width;
-        
-        // Если ширина 0 — элемент не отрисован, пропускаем
-        if (cellWidth === 0) continue;
-        
+        if (cellWidth === 0) {
+            console.warn('⚠️ cellWidth = 0, элемент не отрисован');
+            continue;
+        }
+
         const gap = 2;
         const cellStep = cellWidth + gap;
         const gridWidth = totalDays * cellWidth + (totalDays - 1) * gap;
@@ -203,24 +157,30 @@ function renderChallengeBars() {
 
         const monthChallenges = [];
         challenges.forEach(ch => {
-            if (!ch.startDate || !ch.endDate) return;
-            
+            if (!ch.startDate) return;
+
             const sM = ch.startDate.month;
-            const eM = ch.endDate ? ch.endDate.month : 11;
+            const effEnd = getEffectiveEndDate(ch);
+            const eM = effEnd.month;
 
             if (m < sM || m > eM) return;
 
             let sDay = (m === sM) ? ch.startDate.day : 1;
-            let eDay = (m === eM) ? (ch.endDate ? ch.endDate.day : totalDays) : totalDays;
+            let eDay = (m === eM) ? effEnd.day : totalDays;
+
+            const isClippedRight = ch.endDate === null;
+            const isClippedLeft = (m === sM && ch.startDate.day > 1) ? false : (m > sM);
 
             monthChallenges.push({
                 challenge: ch,
                 sDay: sDay,
                 eDay: eDay,
-                isClippedRight: (m === eM && ch.endDate) ? false : (m < eM),
-                isClippedLeft: (m === sM && ch.startDate.day > 1) ? false : (m > sM)
+                isClippedRight: isClippedRight,
+                isClippedLeft: isClippedLeft
             });
         });
+
+        console.log(`📅 Месяц ${m}, челленджей для отображения:`, monthChallenges.length);
 
         const rows = [];
         const barHeight = 26;
@@ -229,7 +189,7 @@ function renderChallengeBars() {
 
         monthChallenges.forEach(item => {
             let placed = false;
-            
+
             for (let r = 0; r < rows.length; r++) {
                 let overlap = false;
                 for (const existing of rows[r]) {
@@ -238,7 +198,7 @@ function renderChallengeBars() {
                         break;
                     }
                 }
-                
+
                 if (!overlap) {
                     rows[r].push(item);
                     placeBar(item, r);
@@ -246,7 +206,7 @@ function renderChallengeBars() {
                     break;
                 }
             }
-            
+
             if (!placed) {
                 rows.push([item]);
                 placeBar(item, rows.length - 1);
@@ -257,8 +217,7 @@ function renderChallengeBars() {
 
         function placeBar(item, rowIndex) {
             const ch = item.challenge;
-            
-            // Название НАД полоской
+
             const label = document.createElement('div');
             label.style.position = 'absolute';
             label.style.left = ((item.sDay - 1) * cellStep) + 'px';
@@ -273,7 +232,6 @@ function renderChallengeBars() {
             label.textContent = ch.name;
             container.appendChild(label);
 
-            // Полоска
             const bar = document.createElement('div');
             bar.className = 'challenge-bar';
             bar.style.backgroundColor = ch.color || '#cbd5e1';
@@ -290,15 +248,16 @@ function renderChallengeBars() {
             if (item.isClippedRight) {
                 bar.style.borderTopRightRadius = '0';
                 bar.style.borderBottomRightRadius = '0';
-                bar.style.borderRight = '2px dashed rgba(0,0,0,0.3)';
+                bar.style.borderRight = '2px dashed rgba(255,255,255,0.3)';
             }
             if (item.isClippedLeft) {
                 bar.style.borderTopLeftRadius = '0';
                 bar.style.borderBottomLeftRadius = '0';
-                bar.style.borderLeft = '2px dashed rgba(0,0,0,0.3)';
+                bar.style.borderLeft = '2px dashed rgba(255,255,255,0.3)';
             }
 
             container.appendChild(bar);
+            console.log('✅ Полоска создана:', ch.name);
         }
     }
 }
@@ -312,33 +271,35 @@ function openChallengeModal(id = null) {
     const name = ch ? ch.name : '';
     const comment = ch ? ch.comment : '';
     const color = ch ? ch.color : '#fde68a';
-    
+
     const contentAmount = ch && ch.content ? ch.content.amount : '';
     const contentUnit = ch && ch.content ? ch.content.unit : 'pages';
     const contentCustomUnit = ch && ch.content ? ch.content.customUnit : '';
     const contentNote = ch && ch.content ? ch.content.note : '';
-    
+
     const normAmount = ch && ch.norm ? ch.norm.amount : '';
-    const normUnit = ch && ch.norm ? ch.norm.unit : 'pages';
-    
+    const normUnit = ch && ch.norm ? ch.norm.unit : contentUnit;
+
     const freqType = ch && ch.frequency ? ch.frequency.type : 'daily';
     const freqDays = ch && ch.frequency ? ch.frequency.days : [];
+
+    const hasEndDate = ch ? (ch.endDate !== null && ch.endDate !== undefined) : false;
 
     const html = `
         <div class="modal-overlay active" id="challengeModal">
             <div class="modal-card">
                 <h2>${title}</h2>
-                
+
                 <div style="margin-bottom:12px;">
                     <label style="display:block;font-size:13px;color:#7a8ba8;margin-bottom:6px;">Название</label>
                     <input type="text" id="chName" value="${name}" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #1f2838;background:#0b0e14;color:#e8edf5;font-size:14px;font-family:inherit;outline:none;" />
                 </div>
-                
+
                 <div style="margin-bottom:12px;">
                     <label style="display:block;font-size:13px;color:#7a8ba8;margin-bottom:6px;">Комментарий</label>
                     <textarea id="chComment" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #1f2838;background:#0b0e14;color:#e8edf5;font-size:14px;font-family:inherit;outline:none;min-height:60px;resize:vertical;">${comment}</textarea>
                 </div>
-                
+
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
                     <div>
                         <label style="display:block;font-size:13px;color:#7a8ba8;margin-bottom:6px;">Дата начала</label>
@@ -346,13 +307,13 @@ function openChallengeModal(id = null) {
                     </div>
                     <div>
                         <label style="display:block;font-size:13px;color:#7a8ba8;margin-bottom:6px;">Дата окончания</label>
-                        <input type="date" id="chEnd" value="${ch && ch.endDate ? formatDateForInput(ch.endDate) : ''}" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #1f2838;background:#0b0e14;color:#e8edf5;font-size:14px;font-family:inherit;" />
+                        <input type="date" id="chEnd" value="${ch && ch.endDate ? formatDateForInput(ch.endDate) : ''}" ${!hasEndDate ? 'disabled' : ''} style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #1f2838;background:#0b0e14;color:#e8edf5;font-size:14px;font-family:inherit;${!hasEndDate ? 'opacity:0.5;' : ''}" />
                         <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#7a8ba8;margin-top:6px;cursor:pointer;">
-                            <input type="checkbox" id="chNoEnd" ${!ch || !ch.endDate ? 'checked' : ''} /> Без даты окончания
+                            <input type="checkbox" id="chNoEnd" ${!hasEndDate ? 'checked' : ''} /> Без даты окончания
                         </label>
                     </div>
                 </div>
-                
+
                 <div style="background:#0b0e14;padding:12px;border-radius:10px;border:1px solid #1f2838;margin-bottom:12px;">
                     <label style="display:block;font-size:13px;color:#7a8ba8;margin-bottom:8px;font-weight:600;">Содержание</label>
                     <div style="display:grid;grid-template-columns:80px 1fr;gap:8px;margin-bottom:8px;">
@@ -376,7 +337,7 @@ function openChallengeModal(id = null) {
                         <input type="text" id="contentNote" value="${contentNote}" placeholder="Ссылки на ресурсы, заметки..." style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #1f2838;background:#141a24;color:#e8edf5;font-size:13px;font-family:inherit;" />
                     </div>
                 </div>
-                
+
                 <div style="background:#0b0e14;padding:12px;border-radius:10px;border:1px solid #1f2838;margin-bottom:12px;">
                     <label style="display:block;font-size:13px;color:#7a8ba8;margin-bottom:8px;font-weight:600;">Норма за один подход</label>
                     <div style="display:grid;grid-template-columns:80px 1fr;gap:8px;">
@@ -394,7 +355,7 @@ function openChallengeModal(id = null) {
                         </div>
                     </div>
                 </div>
-                
+
                 <div style="background:#0b0e14;padding:12px;border-radius:10px;border:1px solid #1f2838;margin-bottom:12px;">
                     <label style="display:block;font-size:13px;color:#7a8ba8;margin-bottom:8px;font-weight:600;">Частота подходов</label>
                     <select id="freqType" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid #1f2838;background:#141a24;color:#e8edf5;font-size:13px;font-family:inherit;margin-bottom:8px;">
@@ -413,12 +374,12 @@ function openChallengeModal(id = null) {
                         </div>
                     </div>
                 </div>
-                
+
                 <div style="margin-bottom:12px;">
                     <label style="display:block;font-size:13px;color:#7a8ba8;margin-bottom:6px;">Цвет</label>
                     <input type="color" id="chColor" value="${color}" style="width:60px;height:40px;border:1px solid #1f2838;border-radius:8px;background:#0b0e14;cursor:pointer;" />
                 </div>
-                
+
                 <div style="display:flex;gap:8px;margin-top:20px;">
                     ${isEdit ? `<button id="deleteChBtn" style="background:#3a1a1a;color:#e8edf5;border:none;border-radius:12px;padding:10px 20px;font-size:14px;cursor:pointer;font-family:inherit;margin-right:auto;">Удалить</button>` : ''}
                     <button id="cancelChBtn" style="background:#1a2230;color:#7a8ba8;border:none;border-radius:12px;padding:10px 20px;font-size:14px;cursor:pointer;font-family:inherit;">Отмена</button>
@@ -440,14 +401,16 @@ function openChallengeModal(id = null) {
     const customUnitContainer = document.getElementById('customUnitContainer');
     const freqTypeSelect = document.getElementById('freqType');
     const weekDaysContainer = document.getElementById('weekDaysContainer');
+    const normUnitSelect = document.getElementById('normUnit');
 
     noEndCheckbox.addEventListener('change', function() {
         endDateInput.disabled = this.checked;
+        endDateInput.style.opacity = this.checked ? '0.5' : '1';
     });
-    endDateInput.disabled = noEndCheckbox.checked;
 
     contentUnitSelect.addEventListener('change', function() {
         customUnitContainer.style.display = this.value === 'custom' ? 'block' : 'none';
+        normUnitSelect.value = this.value;
     });
 
     freqTypeSelect.addEventListener('change', function() {
@@ -477,9 +440,9 @@ function openChallengeModal(id = null) {
 
         const contentUnit = document.getElementById('contentUnit').value;
         const contentCustomUnit = contentUnit === 'custom' ? document.getElementById('contentCustomUnit').value.trim() : '';
-        
+
         const freqType = document.getElementById('freqType').value;
-        const freqDays = freqType === 'weekly' 
+        const freqDays = freqType === 'weekly'
             ? Array.from(document.querySelectorAll('.weekDayCheckbox:checked')).map(cb => parseInt(cb.value))
             : [];
 
