@@ -25,48 +25,31 @@
             <!-- Навигация -->
             <nav class="nav" id="mainNav">
                 <button class="active" data-screen="calendar">Календарь</button>
-                <button data-screen="year">Год</button>
+                <button data-screen="studies">Учебные материалы</button>
                 <button data-screen="gallery">Фото</button>
-                <button data-screen="challenges">Челленджи</button>
+                <button data-screen="books">Читательский дневник</button>
+                <button data-screen="movies">Кинодневник</button>
                 <button data-screen="logout" id="logoutBtn">Выход</button>
             </nav>
 
-            <!-- Календарь (месяц) -->
+            <!-- Календарь -->
             <div id="screenCalendar" class="screen active">
-                <div class="calendar-header">
-                    <h2 id="calendarTitle">Август 2026</h2>
-                    <div class="month-nav">
-                        <button id="prevMonth">‹</button>
-                        <button id="nextMonth">›</button>
-                    </div>
+                <div class="calendar-wrapper" id="calendarWrapper">
+                    <!-- Заполняется из calendar.js -->
                 </div>
-                <div id="challengeProgress" class="challenge-progress">
-                    <h3>Прогресс за месяц</h3>
-                    <div id="progressContainer"></div>
-                </div>
-                <div class="calendar-grid" id="calendarGrid"></div>
-                <div class="hint">Кликните на день, чтобы открыть</div>
             </div>
 
-            <!-- Глобальный календарь (год) -->
-            <div id="screenYear" class="screen">
-                <div class="year-header">
-                    <h2 id="yearTitle">2026</h2>
-                    <div class="year-nav">
-                        <button id="prevYear">‹</button>
-                        <button id="nextYear">›</button>
+            <!-- Учебные материалы -->
+            <div id="screenStudies" class="screen">
+                <div class="studies-header">
+                    <h2>Учебные материалы</h2>
+                    <div class="studies-nav">
+                        <button class="active" data-study="matematika">Математика</button>
+                        <button data-study="filosofiya">Философия</button>
+                        <button data-study="yazyki">Языкознание</button>
                     </div>
                 </div>
-                <div class="filters">
-                    <span>Фильтры:</span>
-                    <button class="filter-btn active" data-filter="all">Все</button>
-                    <button class="filter-btn" data-filter="matematika">Математика</button>
-                    <button class="filter-btn" data-filter="filosofiya">Философия</button>
-                    <button class="filter-btn" data-filter="yazyki">Языки</button>
-                    <button class="filter-btn" data-filter="books">Книги</button>
-                    <button class="filter-btn" data-filter="courses">Курсы</button>
-                </div>
-                <div id="yearCalendar" class="year-calendar"></div>
+                <div id="studiesContent" class="studies-content"></div>
             </div>
 
             <!-- Галерея фото -->
@@ -78,62 +61,50 @@
                 <div id="galleryGrid" class="gallery-grid"></div>
             </div>
 
-            <!-- Управление челленджами -->
-            <div id="screenChallenges" class="screen">
-                <div class="challenges-header">
-                    <h2>Челленджи</h2>
-                    <button id="addChallengeBtn">+ Добавить</button>
+            <!-- Читательский дневник -->
+            <div id="screenBooks" class="screen">
+                <div class="diary-header">
+                    <h2>Читательский дневник</h2>
+                    <button id="addBookBtn">+ Добавить</button>
                 </div>
-                <div id="challengesList" class="challenges-list"></div>
+                <div id="booksDiary" class="diary-list"></div>
             </div>
 
-            <!-- Страничка дня -->
-            <div id="screenDay" class="screen">
-                <div class="day-page-header">
-                    <button class="back-btn" id="dayBackBtn">← Назад</button>
-                    <h2 id="dayTitle">18 августа 2026</h2>
-                    <button class="save-btn" id="daySaveBtn">Сохранить</button>
+            <!-- Кинодневник -->
+            <div id="screenMovies" class="screen">
+                <div class="diary-header">
+                    <h2>Кинодневник</h2>
+                    <button id="addMovieBtn">+ Добавить</button>
                 </div>
-                <!-- Рекомендации -->
-                <div id="recommendations" class="recommendations"></div>
-                <!-- Список дел -->
-                <div class="todo-section">
-                    <div class="todo-header">
-                        <h3>Дела</h3>
-                        <button class="add-todo-btn" id="addTodoBtn">+ Добавить</button>
-                        <button class="add-event-btn" id="addEventBtn">+ Событие</button>
+                <div id="moviesDiary" class="diary-list"></div>
+            </div>
+
+            <!-- Страничка дня (модалка) -->
+            <div id="dayModal" class="modal-overlay">
+                <div class="modal">
+                    <div class="modal-header">
+                        <h3 id="dayModalTitle">18 августа 2026</h3>
+                        <button class="close-btn" onclick="closeDayModal()">✕</button>
                     </div>
-                    <div id="todoList"></div>
-                </div>
-                <!-- Заметки -->
-                <div class="notes-section">
-                    <h3>Заметки</h3>
-                    <textarea id="dayNotes" placeholder="Ваши заметки за этот день..."></textarea>
-                </div>
-                <!-- Файлы дня -->
-                <div class="day-files-section">
-                    <h3>Файлы дня</h3>
-                    <div id="dayFilesList" class="file-list"></div>
-                    <div class="upload-area">
-                        <button id="uploadDayFileBtn">Загрузить файл ко дню</button>
-                        <button id="uploadDayPhotoBtn">Загрузить фото ко дню</button>
+                    <div id="dayModalContent">
+                        <!-- Заполняется из calendar.js -->
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Модальное окно -->
+    <!-- Модальное окно (общее) -->
     <div id="modalOverlay" class="modal-overlay">
         <div class="modal" id="modalContent"></div>
     </div>
 
     <script src="js/terabox.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/challenges.js"></script>
-    <script src="js/todos.js"></script>
-    <script src="js/gallery.js"></script>
-    <script src="js/calendar.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/calendar.js"></script>
+    <script src="js/studies.js"></script>
+    <script src="js/gallery.js"></script>
+    <script src="js/books.js"></script>
+    <script src="js/movies.js"></script>
 </body>
 </html>

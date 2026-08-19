@@ -7,18 +7,16 @@ let APP = {
     token: null,
     login: '',
     password: '',
-    currentYear: new Date().getFullYear(),
-    currentMonth: new Date().getMonth(),
-    selectedDate: null,
-    dayData: {},
-    challenges: [
-        { name: 'Латынь (Мирошенкова)', startDate: '2026-08-01', endDate: '', color: '#e74c3c', subject: 'yazyki', type: 'course', tempo: '2', unit: 'уроков' },
-        { name: 'История частной жизни. Том 1', startDate: '2026-08-01', endDate: '', color: '#f39c12', subject: '', type: 'book', tempo: '10', unit: 'страниц' },
-        { name: 'Кабала (Т. Уайлдер)', startDate: '2026-08-06', endDate: '2026-08-11', color: '#f1c40f', subject: '', type: 'book', tempo: '15', unit: 'страниц' },
-        { name: 'Окрестностная семантика', startDate: '2026-08-04', endDate: '2026-08-17', color: '#2ecc71', subject: 'filosofiya', type: 'course', tempo: '1', unit: 'лекций' }
-    ],
+    challenges: [],
     events: [],
-    challengeColors: {}
+    studies: {
+        matematika: { files: [], links: [] },
+        filosofiya: { files: [], links: [] },
+        yazyki: { files: [], links: [] }
+    },
+    books: [],
+    movies: [],
+    dayData: {}
 };
 
 function loadAppState() {
@@ -39,14 +37,64 @@ function saveAppState() {
             token: APP.token,
             login: APP.login,
             password: APP.password,
-            currentYear: APP.currentYear,
-            currentMonth: APP.currentMonth,
             challenges: APP.challenges,
             events: APP.events,
+            studies: APP.studies,
+            books: APP.books,
+            movies: APP.movies,
             dayData: APP.dayData
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
     } catch (e) {}
+}
+
+function showToast(msg, type = 'info') {
+    const old = document.querySelector('.toast');
+    if (old) old.remove();
+    const div = document.createElement('div');
+    div.className = 'toast' + (type === 'error' ? ' error' : '');
+    div.textContent = msg;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 2500);
+}
+
+function showModal(title, content) {
+    const overlay = document.getElementById('modalOverlay');
+    const modal = document.getElementById('modalContent');
+    modal.innerHTML = `<h3>${title}</h3>${content}`;
+    overlay.classList.add('open');
+    setTimeout(() => {
+        const inp = modal.querySelector('input, textarea, select');
+        if (inp) inp.focus();
+    }, 100);
+}
+
+function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
+});
+
+function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById('screen' + screenId.charAt(0).toUpperCase() + screenId.slice(1));
+    if (target) target.classList.add('active');
+
+    document.querySelectorAll('.nav button[data-screen]').forEach(b => {
+        b.classList.toggle('active', b.dataset.screen === screenId);
+    });
+
+    if (screenId === 'calendar') renderCalendar();
+    if (screenId === 'studies') renderStudies();
+    if (screenId === 'gallery') renderGallery();
+    if (screenId === 'books') renderBooks();
+    if (screenId === 'movies') renderMovies();
 }
 
 // Инициализация
@@ -57,8 +105,10 @@ async function initApp() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('appScreen').style.display = 'block';
         renderCalendar();
-        renderChallenges();
+        renderStudies();
         renderGallery();
+        renderBooks();
+        renderMovies();
         showToast('Добро пожаловать!');
         return;
     }
@@ -84,8 +134,10 @@ async function initApp() {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('appScreen').style.display = 'block';
                 renderCalendar();
-                renderChallenges();
+                renderStudies();
                 renderGallery();
+                renderBooks();
+                renderMovies();
                 showToast('Вход выполнен!');
             }
         } catch (e) {
@@ -94,7 +146,6 @@ async function initApp() {
     });
 }
 
-// Обработчики событий
 document.addEventListener('DOMContentLoaded', function() {
     initApp();
 
@@ -115,118 +166,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    document.getElementById('prevMonth').addEventListener('click', function() {
-        APP.currentMonth--;
-        if (APP.currentMonth < 0) {
-            APP.currentMonth = 11;
-            APP.currentYear--;
-        }
-        renderCalendar();
-    });
-    document.getElementById('nextMonth').addEventListener('click', function() {
-        APP.currentMonth++;
-        if (APP.currentMonth > 11) {
-            APP.currentMonth = 0;
-            APP.currentYear++;
-        }
-        renderCalendar();
-    });
-
-    document.getElementById('prevYear').addEventListener('click', function() {
-        APP.currentYear--;
-        document.getElementById('yearTitle').textContent = APP.currentYear;
-        renderYearCalendar();
-    });
-    document.getElementById('nextYear').addEventListener('click', function() {
-        APP.currentYear++;
-        document.getElementById('yearTitle').textContent = APP.currentYear;
-        renderYearCalendar();
+    document.getElementById('addPhotoBtn').addEventListener('click', function() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.multiple = true;
+        input.onchange = async function(e) {
+            const files = e.target.files;
+            if (!files.length) return;
+            const path = 'Хроника/Фото';
+            await teraboxCreateFolder(path);
+            for (let file of files) {
+                const dateStr = new Date().toISOString().slice(0,10);
+                const newName = `${dateStr}_${file.name}`;
+                const renamed = new File([file], newName, { type: file.type });
+                await teraboxUploadFile(path, renamed, { source: 'gallery' });
+            }
+            showToast('Фото загружены');
+            renderGallery();
+        };
+        input.click();
     });
 
-    document.getElementById('dayBackBtn').addEventListener('click', function() {
-        saveCurrentDay();
-        showScreen('calendar');
-    });
-    document.getElementById('daySaveBtn').addEventListener('click', saveCurrentDay);
-    document.getElementById('addTodoBtn').addEventListener('click', addTodo);
-    document.getElementById('addEventBtn').addEventListener('click', addEvent);
-    document.getElementById('addChallengeBtn').addEventListener('click', addChallenge);
-    document.getElementById('uploadDayFileBtn').addEventListener('click', uploadDayFile);
-    document.getElementById('uploadDayPhotoBtn').addEventListener('click', uploadDayPhoto);
-
-    document.getElementById('dayNotes').addEventListener('blur', function() {
-        const data = getCurrentDayData();
-        if (data) {
-            data.notes = this.value;
-            saveAppState();
-        }
-    });
+    document.getElementById('addBookBtn').addEventListener('click', addBook);
+    document.getElementById('addMovieBtn').addEventListener('click', addMovie);
 });
-
-// Функции для открытия дня
-async function openDay(dateStr) {
-    APP.selectedDate = dateStr;
-    const parts = dateStr.split('-');
-    const day = parseInt(parts[2]);
-    const month = parseInt(parts[1]);
-    const year = parseInt(parts[0]);
-    const monthNames = ['Января', 'Февраля', 'Марта', 'Апреля', 'Мая', 'Июня',
-        'Июля', 'Августа', 'Сентября', 'Октября', 'Ноября', 'Декабря'];
-    document.getElementById('dayTitle').textContent = `${day} ${monthNames[month-1]} ${year}`;
-
-    let dayData = APP.dayData[dateStr];
-    if (!dayData) {
-        dayData = await loadDayData(dateStr);
-        APP.dayData[dateStr] = dayData;
-        saveAppState();
-    }
-
-    renderDayPage(dayData);
-    generateRecommendations();
-    showScreen('day');
-}
-
-function renderDayPage(data) {
-    const todoList = document.getElementById('todoList');
-    const notes = document.getElementById('dayNotes');
-    const dayFiles = document.getElementById('dayFilesList');
-
-    notes.value = data.notes || '';
-
-    let html = '';
-    for (let i = 0; i < data.todos.length; i++) {
-        const todo = data.todos[i];
-        const doneClass = todo.done ? 'done' : '';
-        const textClass = todo.done ? 'done-text' : '';
-        const color = todo.color || '#2a3344';
-
-        html += `
-            <div class="todo-item" style="border-left-color:${color};">
-                <div class="todo-check ${doneClass}" onclick="toggleTodo(${i})"></div>
-                <span class="todo-text ${textClass}">${escHtml(todo.text)}</span>
-                <button class="todo-delete" onclick="deleteTodo(${i})">✕</button>
-                <div class="todo-files">
-                    ${(todo.files || []).map(f => `
-                        <span class="file-tag">
-                            ${f}
-                            <span class="remove-file" onclick="removeTodoFile(${i}, '${f}')">✕</span>
-                        </span>
-                    `).join('')}
-                    <button class="todo-upload-btn" onclick="uploadTodoFile(${i})">+ файл</button>
-                </div>
-            </div>
-        `;
-    }
-    todoList.innerHTML = html || '<div class="text-muted" style="padding:12px;text-align:center;">Нет дел на сегодня</div>';
-
-    let filesHtml = '';
-    for (let f of (data.dayFiles || [])) {
-        filesHtml += `
-            <span class="file-tag">
-                ${f}
-                <span class="remove-file" onclick="removeDayFile('${f}')">✕</span>
-            </span>
-        `;
-    }
-    dayFiles.innerHTML = filesHtml || '<span class="text-muted">Нет файлов</span>';
-}
