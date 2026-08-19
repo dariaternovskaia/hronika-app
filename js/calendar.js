@@ -1,5 +1,5 @@
 // ============================================================
-// КАЛЕНДАРЬ (БЕСКОНЕЧНЫЙ СКРОЛЛ, ПОЛОСЫ ПОВЕРХ ДНЕЙ, ЛЕГЕНДА)
+// КАЛЕНДАРЬ (ПОЛОСЫ ПОВЕРХ ДНЕЙ)
 // ============================================================
 
 let currentYear = new Date().getFullYear();
@@ -42,11 +42,14 @@ function renderMonth(year, month) {
     
     // ===== СТРОИМ СЕТКУ ДНЕЙ =====
     let gridHtml = '';
+    
+    // Пустые ячейки до первого дня
     for (let i = offset - 1; i >= 0; i--) {
         const day = new Date(year, month, 0).getDate() - i;
         gridHtml += `<div class="day-cell other-month"><span class="day-number">${day}</span></div>`;
     }
     
+    // Дни месяца
     for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const dayChallenges = APP.challenges.filter(ch => 
@@ -54,6 +57,12 @@ function renderMonth(year, month) {
         );
         const isEvent = APP.events && APP.events.some(e => e.date === dateStr);
         
+        const hasChallenge = dayChallenges.length > 0;
+        let cls = 'day-cell';
+        if (hasChallenge) cls += ' has-challenge';
+        if (isEvent) cls += ' event-day';
+        
+        // Точки под числом (показывают, какие челленджи активны)
         let dots = '';
         if (dayChallenges.length > 0) {
             const colors = dayChallenges.map(ch => ch.color);
@@ -63,20 +72,17 @@ function renderMonth(year, month) {
             dots += '<span class="event-dot"></span>';
         }
         
-        const hasChallenge = dayChallenges.length > 0;
-        let cls = 'day-cell';
-        if (hasChallenge) cls += ' has-challenge';
-        if (isEvent) cls += ' event-day';
-        
         gridHtml += `
-            <div class="${cls}" onclick="openDayModal('${dateStr}')">
+            <div class="${cls}" onclick="openDayModal('${dateStr}')" style="position:relative;z-index:2;">
                 <span class="day-number">${d}</span>
-                ${dots ? `<div style="display:flex;gap:1px;margin-top:1px;flex-wrap:wrap;">${dots}</div>` : ''}
+                ${dots ? `<div style="display:flex;gap:1px;margin-top:1px;flex-wrap:wrap;justify-content:center;">${dots}</div>` : ''}
             </div>
         `;
     }
     
-    // ===== ПОЛОСЫ ЧЕЛЛЕНДЖЕЙ ПОВЕРХ ДНЕЙ =====
+    // ============================================================
+    // ПОЛОСЫ — ПОВЕРХ ДНЕЙ (КАК НАЛОЖЕНИЕ)
+    // ============================================================
     const monthStr = `${year}-${String(month+1).padStart(2,'0')}`;
     const monthChallenges = APP.challenges.filter(ch => {
         const chStart = ch.startDate || '1970-01-01';
@@ -97,11 +103,13 @@ function renderMonth(year, month) {
         }
     }
     
-    let barsHtml = '';
+    // Строим полосы поверх дней
+    let overlayHtml = '';
     for (let ch of uniqueChallenges) {
         let startDay = 1;
         let endDay = daysInMonth;
         
+        // Определяем реальные даты начала и окончания в этом месяце
         if (ch.startDate && ch.startDate.slice(0,7) === monthStr) {
             startDay = parseInt(ch.startDate.split('-')[2]) || 1;
         }
@@ -113,26 +121,41 @@ function renderMonth(year, month) {
             endDay = daysInMonth;
         }
         
-        const left = ((startDay - 1) / daysInMonth * 100);
-        const width = ((endDay - startDay + 1) / daysInMonth * 100);
-        const challengeIndex = APP.challenges.indexOf(ch);
+        // Вычисляем позицию полосы в сетке
+        const startOffset = offset + startDay - 1;
+        const endOffset = offset + endDay - 1;
+        const totalCells = offset + daysInMonth;
+        const cols = 7;
         
-        barsHtml += `
-            <div class="challenge-bar" style="
-                position: absolute;
-                top: ${uniqueChallenges.indexOf(ch) * 6 + 2}px;
-                left: ${left}%;
-                width: ${Math.max(width, 2)}%;
-                height: 4px;
-                background: ${ch.color};
-                border-radius: 2px;
-                opacity: 0.8;
-                z-index: 5;
-                cursor: pointer;
-            " 
-            onclick="event.stopPropagation(); openChallengeModal(${challengeIndex})"
-            title="${ch.name}: ${ch.startDate || '?'} — ${ch.endDate || 'бесконечно'}"></div>
-        `;
+        const startRow = Math.floor(startOffset / cols);
+        const endRow = Math.floor(endOffset / cols);
+        const startCol = startOffset % cols;
+        const endCol = endOffset % cols;
+        
+        // Полоса может занимать несколько строк
+        for (let row = startRow; row <= endRow; row++) {
+            const rowStartCol = (row === startRow) ? startCol : 0;
+            const rowEndCol = (row === endRow) ? endCol : cols - 1;
+            const left = (rowStartCol / cols * 100);
+            const width = ((rowEndCol - rowStartCol + 1) / cols * 100);
+            const top = (row / (Math.ceil(totalCells / cols)) * 100);
+            const height = (1 / (Math.ceil(totalCells / cols)) * 100);
+            
+            overlayHtml += `
+                <div class="challenge-bar-overlay" style="
+                    position: absolute;
+                    top: ${top}%;
+                    left: ${left}%;
+                    width: ${width}%;
+                    height: ${height}%;
+                    background: ${ch.color};
+                    opacity: 0.3;
+                    border-radius: 2px;
+                    pointer-events: none;
+                    z-index: 1;
+                "></div>
+            `;
+        }
     }
     
     // ===== ЛЕГЕНДА ПОД МЕСЯЦЕМ =====
@@ -140,8 +163,9 @@ function renderMonth(year, month) {
     if (uniqueChallenges.length > 0) {
         legendHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;padding:4px 0;border-top:1px solid #1a2230;">';
         for (let ch of uniqueChallenges) {
+            const challengeIndex = APP.challenges.indexOf(ch);
             legendHtml += `
-                <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:#7a8ba8;cursor:pointer;" onclick="openChallengeModal(${APP.challenges.indexOf(ch)})">
+                <span style="display:flex;align-items:center;gap:4px;font-size:10px;color:#7a8ba8;cursor:pointer;" onclick="openChallengeModal(${challengeIndex})">
                     <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${ch.color};"></span>
                     ${ch.name.length > 20 ? ch.name.slice(0,20) + '…' : ch.name}
                 </span>
@@ -153,9 +177,9 @@ function renderMonth(year, month) {
     return `
         <div class="calendar-month" data-year="${year}" data-month="${month}" style="position:relative;">
             <div class="month-title">${monthNames[month]} ${year}</div>
-            <div class="month-grid" style="position:relative;">
+            <div class="month-grid" style="position:relative;overflow:hidden;">
                 ${gridHtml}
-                ${barsHtml}
+                ${overlayHtml}
             </div>
             ${legendHtml}
         </div>
@@ -163,7 +187,7 @@ function renderMonth(year, month) {
 }
 
 // ============================================================
-// МОДАЛКА ЧЕЛЛЕНДЖА (ПО КЛИКУ НА ПОЛОСУ)
+// МОДАЛКА ЧЕЛЛЕНДЖА (ПО КЛИКУ НА ЛЕГЕНДУ)
 // ============================================================
 
 function openChallengeModal(index) {
