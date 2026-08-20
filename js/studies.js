@@ -49,13 +49,13 @@ async function deleteFolder(id) {
 
 // ========== ДАННЫЕ ==========
 const subjects = {
-    math: { name: 'Математика', color: '#2a4a6a', icon: '📐' },
-    philosophy: { name: 'Философия', color: '#4a2a6a', icon: '️' },
-    linguistics: { name: 'Языкознание', color: '#2a6a4a', icon: '' }
+    math: { name: 'Математика', color: '#2a4a6a' },
+    philosophy: { name: 'Философия', color: '#4a2a6a' },
+    linguistics: { name: 'Языкознание', color: '#2a6a4a' }
 };
 
 let currentSubject = 'math';
-let currentFolderId = null; // null = корень раздела (без папки)
+let currentFolderId = null;
 
 // ========== ОТРИСОВКА ==========
 async function renderStudies() {
@@ -67,13 +67,13 @@ async function renderStudies() {
 
     let html = '';
 
-    // Навигация по предметам (вкладки)
+    // Навигация по предметам (вкладки БЕЗ иконок)
     html += `<div style="display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;">`;
     Object.keys(subjects).forEach(key => {
         const s = subjects[key];
         const isActive = currentSubject === key;
         html += `<button onclick="switchSubject('${key}')" style="
-            padding:10px 20px;
+            padding:10px 24px;
             border-radius:12px;
             border:1px solid ${isActive ? s.color : '#1f2838'};
             background:${isActive ? s.color : '#141a24'};
@@ -83,7 +83,7 @@ async function renderStudies() {
             cursor:pointer;
             font-family:inherit;
             transition:all 0.2s;
-        ">${s.icon} ${s.name}</button>`;
+        ">${s.name}</button>`;
     });
     html += `</div>`;
 
@@ -96,9 +96,7 @@ async function renderStudies() {
             if (f) {
                 breadcrumbs.unshift(f);
                 fid = f.parentId;
-            } else {
-                break;
-            }
+            } else break;
         }
     }
 
@@ -111,9 +109,9 @@ async function renderStudies() {
 
     // Кнопки управления
     html += `<div style="margin-bottom:20px;display:flex;gap:8px;flex-wrap:wrap;">`;
-    html += `<button onclick="createFolder()" style="background:#1a2230;color:#e8edf5;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">📁 Новая папка</button>`;
-    html += `<button onclick="addItem('file')" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;"> Добавить файл</button>`;
-    html += `<button onclick="addItem('link')" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;"> Добавить ссылку</button>`;
+    html += `<button onclick="createFolder()" style="background:#1a2230;color:#e8edf5;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">+ Новая папка</button>`;
+    html += `<button onclick="addItem('file')" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">+ Добавить файл</button>`;
+    html += `<button onclick="addItem('link')" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">+ Добавить ссылку</button>`;
     html += `<button onclick="exportStudies()" style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">📥 Экспорт</button>`;
     html += `<label style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">
          Импорт
@@ -121,7 +119,7 @@ async function renderStudies() {
     </label>`;
     html += `</div>`;
 
-    // Папки в текущем месте
+    // Папки
     const childFolders = folders.filter(f => f.subject === currentSubject && f.parentId === currentFolderId);
     
     if (childFolders.length > 0) {
@@ -142,26 +140,24 @@ async function renderStudies() {
         html += `</div>`;
     }
 
-    // Файлы в текущем месте (включая корень раздела)
-    const itemsInCurrentLocation = [];
-    folders.filter(f => f.subject === currentSubject).forEach(f => {
-        // Если currentFolderId === null, берём файлы из "виртуальной" корневой папки
-        // Если currentFolderId задан, берём файлы из этой папки
-        if (f.parentId === currentFolderId && f.items) {
-            f.items.forEach(item => itemsInCurrentLocation.push({ ...item, folderName: f.name, folderId: f.id }));
-        }
-    });
-
-    // Для корня раздела: файлы, у которых parentId === null (специальный маркер)
-    // Мы храним файлы в папке с id = subject + '_root'
+    // Файлы
     const rootFolderId = currentSubject + '_root';
     const rootFolder = folders.find(f => f.id === rootFolderId);
-    let rootItems = [];
-    if (currentFolderId === null && rootFolder && rootFolder.items) {
-        rootItems = rootFolder.items.map(item => ({ ...item, folderName: subjects[currentSubject].name, folderId: rootFolderId }));
+    let displayItems = [];
+    
+    if (currentFolderId === null) {
+        // Корень раздела — файлы из виртуальной корневой папки
+        if (rootFolder && rootFolder.items) {
+            displayItems = rootFolder.items.map(item => ({ ...item, folderName: subjects[currentSubject].name, folderId: rootFolderId }));
+        }
+    } else {
+        // Внутри папки
+        folders.filter(f => f.subject === currentSubject).forEach(f => {
+            if (f.parentId === currentFolderId && f.items) {
+                f.items.forEach(item => displayItems.push({ ...item, folderName: f.name, folderId: f.id }));
+            }
+        });
     }
-
-    const displayItems = currentFolderId === null ? rootItems : itemsInCurrentLocation;
 
     if (displayItems.length > 0) {
         html += `<div>`;
@@ -175,7 +171,7 @@ async function renderStudies() {
                                 ${getFileIcon(item.type, item.fileType)} ${item.name}
                             </div>
                             <div style="font-size:12px;color:#7a8ba8;margin-bottom:6px;">
-                                ${item.type === 'link' ? '🔗 Ссылка' : '📄 Файл'} • ${item.addedDate}
+                                ${item.type === 'link' ? '🔗 Ссылка' : ' Файл'} • ${item.addedDate}
                             </div>
                             ${item.comment ? `<div style="font-size:13px;color:#aabbcc;margin-bottom:8px;font-style:italic;">${item.comment}</div>` : ''}
                             ${item.type === 'link' ? `<a href="${item.url}" target="_blank" style="color:#6a9aaa;text-decoration:none;font-size:13px;">Открыть ссылку →</a>` : ''}
@@ -202,8 +198,8 @@ async function renderStudies() {
 }
 
 function getFileIcon(type, fileType) {
-    if (type === 'link') return '🔗';
-    const icons = { pdf: '📕', audio: '', video: '🎬', image: '🖼️', other: '📄' };
+    if (type === 'link') return '';
+    const icons = { pdf: '', audio: '🎵', video: '🎬', image: '🖼️', other: '📄' };
     return icons[fileType] || '';
 }
 
@@ -238,7 +234,6 @@ function goToRoot() {
 async function createFolder() {
     const name = prompt('Название папки:');
     if (!name || !name.trim()) return;
-
     const newFolder = {
         id: 'folder_' + Date.now(),
         name: name.trim(),
@@ -246,7 +241,6 @@ async function createFolder() {
         parentId: currentFolderId,
         items: []
     };
-
     await saveFolder(newFolder);
     renderStudies();
 }
@@ -258,7 +252,6 @@ async function deleteFolderPrompt(id) {
 }
 
 async function addItem(type) {
-    // Определяем, куда сохранять: в корень раздела или в текущую папку
     const targetFolderId = currentFolderId || (currentSubject + '_root');
 
     if (type === 'link') {
@@ -272,9 +265,7 @@ async function addItem(type) {
         let folder = folders.find(f => f.id === targetFolderId);
         if (!folder) {
             folder = { id: targetFolderId, name: subjects[currentSubject].name, subject: currentSubject, parentId: null, items: [] };
-            await saveFolder(folder);
         }
-
         folder.items = folder.items || [];
         folder.items.push({
             id: 'item_' + Date.now(),
@@ -284,7 +275,6 @@ async function addItem(type) {
             addedDate: new Date().toISOString().split('T')[0],
             comment: comment.trim()
         });
-
         await saveFolder(folder);
         renderStudies();
     } else if (type === 'file') {
@@ -294,7 +284,6 @@ async function addItem(type) {
         input.onchange = async (e) => {
             const file = e.target.files[0];
             if (!file) return;
-
             const name = prompt('Название (по умолчанию: ' + file.name + '):', file.name);
             if (!name) return;
             const comment = prompt('Комментарий (необязательно):') || '';
@@ -312,7 +301,6 @@ async function addItem(type) {
                 if (!folder) {
                     folder = { id: targetFolderId, name: subjects[currentSubject].name, subject: currentSubject, parentId: null, items: [] };
                 }
-
                 folder.items = folder.items || [];
                 folder.items.push({
                     id: 'item_' + Date.now(),
@@ -323,7 +311,6 @@ async function addItem(type) {
                     addedDate: new Date().toISOString().split('T')[0],
                     comment: comment.trim()
                 });
-
                 await saveFolder(folder);
                 renderStudies();
             };
@@ -343,7 +330,6 @@ async function deleteItem(itemId, folderId) {
     renderStudies();
 }
 
-// ========== ЭКСПОРТ/ИМПОРТ ==========
 async function exportStudies() {
     const folders = await getFolders();
     const dataStr = JSON.stringify(folders, null, 2);
@@ -363,10 +349,7 @@ async function importStudies(file) {
     reader.onload = async (e) => {
         try {
             const imported = JSON.parse(e.target.result);
-            if (!Array.isArray(imported)) {
-                alert(' Неверный формат файла');
-                return;
-            }
+            if (!Array.isArray(imported)) { alert('❌ Неверный формат файла'); return; }
             if (confirm(`Импортировать ${imported.length} записей? Текущие данные будут заменены.`)) {
                 const folders = await getFolders();
                 for (const folder of folders) await deleteFolder(folder.id);
@@ -374,14 +357,11 @@ async function importStudies(file) {
                 renderStudies();
                 alert('✅ Импорт завершён!');
             }
-        } catch (err) {
-            alert(' Ошибка: ' + err.message);
-        }
+        } catch (err) { alert('❌ Ошибка: ' + err.message); }
     };
     reader.readAsText(file);
 }
 
-// Делаем функции глобальными
 window.renderStudies = renderStudies;
 window.switchSubject = switchSubject;
 window.openFolder = openFolder;

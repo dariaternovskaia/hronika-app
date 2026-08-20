@@ -62,8 +62,8 @@ async function renderGallery() {
 
     // Кнопки управления
     html += `<div style="margin-bottom:20px;display:flex;gap:8px;flex-wrap:wrap;">`;
-    html += `<button onclick="addPhoto()" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 20px;font-size:14px;cursor:pointer;font-family:inherit;"> Добавить фото</button>`;
-    html += `<button onclick="exportGallery()" style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">📥 Экспорт</button>`;
+    html += `<button onclick="addPhoto()" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 20px;font-size:14px;cursor:pointer;font-family:inherit;">+ Добавить фото</button>`;
+    html += `<button onclick="exportGallery()" style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;"> Экспорт</button>`;
     html += `<label style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">
          Импорт
         <input type="file" id="importGalleryFile" accept=".json" style="display:none;" onchange="importGallery(this.files[0])" />
@@ -72,21 +72,24 @@ async function renderGallery() {
 
     if (photos.length === 0) {
         html += `<div style="text-align:center;padding:40px;color:#7a8ba8;font-size:15px;">
-             Пока нет фото. Нажми "📷 Добавить фото" чтобы загрузить первое.
+             Пока нет фото. Нажми "+ Добавить фото" чтобы загрузить первое.
         </div>`;
     } else {
-        html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;">`;
+        // ГАЛЕРЕЯ СЕТКОЙ — используем CSS-класс вместо инлайн-стиля
+        html += `<div class="photo-gallery-grid">`;
         
         photos.forEach(photo => {
             html += `
-                <div style="background:#141a24;border:1px solid #1f2838;border-radius:12px;overflow:hidden;">
-                    <img src="${photo.data}" style="width:100%;aspect-ratio:1;object-fit:cover;cursor:pointer;display:block;" onclick="viewPhoto('${photo.id}')" />
-                    <div style="padding:12px;">
-                        <div style="font-size:12px;color:#7a8ba8;margin-bottom:4px;">📅 ${photo.date}</div>
-                        ${photo.comment ? `<div style="font-size:13px;color:#aabbcc;margin-bottom:8px;font-style:italic;">${photo.comment}</div>` : ''}
-                        <div style="display:flex;gap:6px;">
-                            <button onclick="editPhoto('${photo.id}')" style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;">✏️ Изменить</button>
-                            <button onclick="deletePhotoPrompt('${photo.id}')" style="background:#3a1a1a;color:#e8edf5;border:none;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit;"> Удалить</button>
+                <div class="photo-card" style="background:#141a24;border:1px solid #1f2838;border-radius:12px;overflow:hidden;">
+                    <div class="photo-wrapper" onclick="viewPhoto('${photo.id}')">
+                        <img src="${photo.data}" class="photo-thumb" />
+                    </div>
+                    <div class="photo-info">
+                        <div class="photo-date">📅 ${photo.date}</div>
+                        ${photo.comment ? `<div class="photo-comment">${photo.comment}</div>` : ''}
+                        <div class="photo-actions">
+                            <button onclick="editPhoto('${photo.id}')" class="btn-edit">✏️ Изменить</button>
+                            <button onclick="deletePhotoPrompt('${photo.id}')" class="btn-delete">🗑 Удалить</button>
                         </div>
                     </div>
                 </div>
@@ -113,7 +116,7 @@ async function addPhoto() {
 
         for (const file of files) {
             const date = prompt(`Дата фото "${file.name}" (по умолчанию: ${today}):`, today);
-            if (date === null) continue; // отмена
+            if (date === null) continue;
 
             const comment = prompt(`Комментарий к "${file.name}" (необязательно):`) || '';
 
@@ -164,15 +167,15 @@ async function viewPhoto(id) {
     if (!photo) return;
 
     const modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;cursor:pointer;';
+    modal.className = 'photo-viewer-modal';
     modal.onclick = () => modal.remove();
 
     const img = document.createElement('img');
     img.src = photo.data;
-    img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:12px;';
+    img.className = 'photo-viewer-img';
 
     const info = document.createElement('div');
-    info.style.cssText = 'position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);padding:10px 20px;border-radius:12px;color:#e8edf5;font-size:13px;text-align:center;max-width:80%;';
+    info.className = 'photo-viewer-info';
     info.innerHTML = `📅 ${photo.date}${photo.comment ? '<br>' + photo.comment : ''}`;
 
     modal.appendChild(img);
@@ -200,10 +203,7 @@ async function importGallery(file) {
     reader.onload = async (e) => {
         try {
             const imported = JSON.parse(e.target.result);
-            if (!Array.isArray(imported)) {
-                alert('❌ Неверный формат файла');
-                return;
-            }
+            if (!Array.isArray(imported)) { alert('❌ Неверный формат файла'); return; }
             if (confirm(`Импортировать ${imported.length} фото? Текущие данные будут заменены.`)) {
                 const photos = await getPhotos();
                 for (const photo of photos) await deletePhoto(photo.id);
@@ -211,14 +211,11 @@ async function importGallery(file) {
                 renderGallery();
                 alert('✅ Импорт завершён!');
             }
-        } catch (err) {
-            alert('❌ Ошибка: ' + err.message);
-        }
+        } catch (err) { alert('❌ Ошибка: ' + err.message); }
     };
     reader.readAsText(file);
 }
 
-// Делаем функции глобальными
 window.renderGallery = renderGallery;
 window.addPhoto = addPhoto;
 window.editPhoto = editPhoto;
