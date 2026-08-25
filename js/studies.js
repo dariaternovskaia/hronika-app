@@ -1,26 +1,12 @@
 let studiesData = [];
-const studiesRef = window.firebaseRef(window.firebaseDB, 'studies');
 
 async function loadStudies() {
-    try {
-        const snapshot = await window.firebaseGet(studiesRef);
-        if (snapshot.exists()) {
-            studiesData = snapshot.val();
-        } else {
-            studiesData = [];
-        }
-    } catch (err) {
-        console.error('Ошибка загрузки учебных материалов:', err);
-        studiesData = [];
-    }
+    const data = localStorage.getItem('hronika_studies');
+    studiesData = data ? JSON.parse(data) : [];
 }
 
 async function saveStudies() {
-    try {
-        await window.firebaseSet(studiesRef, studiesData);
-    } catch (err) {
-        console.error('Ошибка сохранения:', err);
-    }
+    localStorage.setItem('hronika_studies', JSON.stringify(studiesData));
 }
 
 const subjects = {
@@ -35,22 +21,14 @@ let currentFolderId = null;
 async function renderStudies() {
     const container = document.getElementById('studyContent');
     if (!container) return;
-
     await loadStudies();
 
     let html = '';
-
     html += `<div style="display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap;">`;
     Object.keys(subjects).forEach(key => {
         const s = subjects[key];
         const isActive = currentSubject === key;
-        html += `<button onclick="switchSubject('${key}')" style="
-            padding:10px 24px; border-radius:12px;
-            border:1px solid ${isActive ? s.color : '#1f2838'};
-            background:${isActive ? s.color : '#141a24'};
-            color:${isActive ? '#e8edf5' : '#7a8ba8'};
-            font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 0.2s;
-        ">${s.name}</button>`;
+        html += `<button onclick="switchSubject('${key}')" style="padding:10px 24px;border-radius:12px;border:1px solid ${isActive ? s.color : '#1f2838'};background:${isActive ? s.color : '#141a24'};color:${isActive ? '#e8edf5' : '#7a8ba8'};font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:all 0.2s;">${s.name}</button>`;
     });
     html += `</div>`;
 
@@ -59,10 +37,9 @@ async function renderStudies() {
         let fid = currentFolderId;
         while (fid) {
             const f = studiesData.find(x => x.id === fid);
-            if (f) { breadcrumbs.unshift(f); fid = f.parentId; } else { break; }
+            if (f) { breadcrumbs.unshift(f); fid = f.parentId; } else break;
         }
     }
-
     html += `<div style="margin-bottom:16px;font-size:13px;color:#7a8ba8;">`;
     html += `<span style="cursor:pointer;color:#aabbcc;" onclick="goToRoot()">${subjects[currentSubject].name}</span>`;
     breadcrumbs.forEach(f => {
@@ -74,12 +51,9 @@ async function renderStudies() {
     html += `<button onclick="createFolder()" style="background:#1a2230;color:#e8edf5;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">+ Новая папка</button>`;
     html += `<button onclick="addItem('file')" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">+ Добавить файл</button>`;
     html += `<button onclick="addItem('link')" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">+ Добавить ссылку</button>`;
-    html += `<button onclick="exportStudies()" style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">📥 Экспорт</button>`;
-    html += `<label style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">📤 Импорт<input type="file" id="importStudiesFile" accept=".json" style="display:none;" onchange="importStudies(this.files[0])" /></label>`;
     html += `</div>`;
 
     const childFolders = studiesData.filter(f => f.subject === currentSubject && f.parentId === currentFolderId);
-    
     if (childFolders.length > 0) {
         html += `<div style="margin-bottom:20px;"><div style="font-size:12px;color:#7a8ba8;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Папки</div>`;
         childFolders.forEach(folder => {
@@ -95,7 +69,6 @@ async function renderStudies() {
     const rootFolderId = currentSubject + '_root';
     const rootFolder = studiesData.find(f => f.id === rootFolderId);
     let displayItems = [];
-    
     if (currentFolderId === null) {
         if (rootFolder && rootFolder.items) displayItems = rootFolder.items.map(item => ({ ...item, folderName: subjects[currentSubject].name, folderId: rootFolderId }));
     } else {
@@ -137,7 +110,7 @@ async function renderStudies() {
 
 function getFileIcon(type, fileType) {
     if (type === 'link') return '🔗';
-    const icons = { pdf: '📕', audio: '🎵', video: '🎬', image: '🖼️', other: '📄' };
+    const icons = { pdf: '📕', audio: '🎵', video: '🎬', image: '🖼️', other: '' };
     return icons[fileType] || '📄';
 }
 
@@ -195,7 +168,6 @@ async function addItem(type) {
             else if (file.type.startsWith('audio/')) fileType = 'audio';
             else if (file.type.startsWith('video/')) fileType = 'video';
             else if (file.type.startsWith('image/')) fileType = 'image';
-
             const reader = new FileReader();
             reader.onload = async (event) => {
                 let folder = studiesData.find(f => f.id === targetFolderId);
@@ -217,33 +189,6 @@ async function deleteItem(itemId, folderId) {
     if (folder) { folder.items = folder.items.filter(item => item.id !== itemId); await saveStudies(); renderStudies(); }
 }
 
-async function exportStudies() {
-    const dataStr = JSON.stringify(studiesData, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `hronika-studies-${new Date().toISOString().split('T')[0]}.json`; a.click();
-    URL.revokeObjectURL(url);
-    alert('✅ Файл сохранён!');
-}
-
-async function importStudies(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const imported = JSON.parse(e.target.result);
-            if (!Array.isArray(imported)) { alert('❌ Неверный формат'); return; }
-            if (confirm(`Импортировать ${imported.length} записей? Текущие данные будут заменены.`)) {
-                studiesData = imported;
-                await saveStudies();
-                renderStudies();
-                alert('✅ Импорт завершён!');
-            }
-        } catch (err) { alert('❌ Ошибка: ' + err.message); }
-    };
-    reader.readAsText(file);
-}
-
 window.renderStudies = renderStudies;
 window.switchSubject = switchSubject;
 window.openFolder = openFolder;
@@ -252,6 +197,4 @@ window.createFolder = createFolder;
 window.deleteFolderPrompt = deleteFolderPrompt;
 window.addItem = addItem;
 window.deleteItem = deleteItem;
-window.exportStudies = exportStudies;
-window.importStudies = importStudies;
 window.viewImage = viewImage;

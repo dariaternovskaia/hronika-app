@@ -11,13 +11,14 @@
     <div id="app">
         <div class="container">
             <h1 style="text-align: center; margin-bottom: 16px; font-weight: 300; letter-spacing: 2px; color: #7a8ba8;">Хроника</h1>
-            <nav class="nav">
+            <nav class="nav" style="position:relative;">
                 <button class="active" data-screen="calendar">Календарь</button>
                 <button data-screen="studies">Учебные материалы</button>
                 <button data-screen="gallery">Фото</button>
                 <button data-screen="books">Читательский дневник</button>
                 <button data-screen="movies">Кинодневник</button>
                 <button data-screen="logout">Выход</button>
+                <button id="syncBtn" onclick="showSyncMenu()" style="background:#2a6a4a;color:#e8edf5;border:none;border-radius:10px;padding:10px 14px;font-size:12px;cursor:pointer;font-family:inherit;margin-left:4px;">☁️ Синхр.</button>
             </nav>
         </div>
 
@@ -53,11 +54,18 @@
     </div>
 
     <script src="js/app.js"></script>
+    <script src="js/sync.js"></script>
     <script src="js/calendar.js"></script>
     <script src="js/studies.js"></script>
     <script src="js/gallery.js"></script>
     <script src="js/books.js"></script>
     <script src="js/movies.js"></script>
     <script src="js/terabox.js"></script>
+    
+    <script>
+        window.addEventListener('load', () => {
+            setTimeout(showSyncReminder, 2000);
+        });
+    </script>
 </body>
 </html>

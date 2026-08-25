@@ -1,15 +1,12 @@
 let photosData = [];
-const photosRef = window.firebaseRef(window.firebaseDB, 'photos');
 
 async function loadPhotos() {
-    try {
-        const snapshot = await window.firebaseGet(photosRef);
-        if (snapshot.exists()) { photosData = snapshot.val(); } else { photosData = []; }
-    } catch (err) { console.error('Ошибка загрузки фото:', err); photosData = []; }
+    const data = localStorage.getItem('hronika_photos');
+    photosData = data ? JSON.parse(data) : [];
 }
 
 async function savePhotos() {
-    try { await window.firebaseSet(photosRef, photosData); } catch (err) { console.error('Ошибка сохранения:', err); }
+    localStorage.setItem('hronika_photos', JSON.stringify(photosData));
 }
 
 async function renderGallery() {
@@ -21,12 +18,10 @@ async function renderGallery() {
     let html = '';
     html += `<div style="margin-bottom:20px;display:flex;gap:8px;flex-wrap:wrap;">`;
     html += `<button onclick="addPhoto()" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 20px;font-size:14px;cursor:pointer;font-family:inherit;">+ Добавить фото</button>`;
-    html += `<button onclick="exportGallery()" style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">📥 Экспорт</button>`;
-    html += `<label style="background:#1a2230;color:#7a8ba8;border:1px solid #1f2838;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">📤 Импорт<input type="file" id="importGalleryFile" accept=".json" style="display:none;" onchange="importGallery(this.files[0])" /></label>`;
     html += `</div>`;
 
     if (photosData.length === 0) {
-        html += `<div style="text-align:center;padding:40px;color:#7a8ba8;font-size:15px;">Пока нет фото. Нажми "+ Добавить фото" чтобы загрузить первое.</div>`;
+        html += `<div style="text-align:center;padding:40px;color:#7a8ba8;font-size:15px;">📷 Пока нет фото. Нажми "+ Добавить фото" чтобы загрузить первое.</div>`;
     } else {
         html += `<div class="photo-gallery-grid">`;
         photosData.forEach(photo => {
@@ -37,7 +32,7 @@ async function renderGallery() {
                     ${photo.comment ? `<div class="photo-comment">${photo.comment}</div>` : ''}
                     <div class="photo-actions">
                         <button onclick="editPhoto('${photo.id}')" class="btn-edit">✏️ Изменить</button>
-                        <button onclick="deletePhotoPrompt('${photo.id}')" class="btn-delete">🗑 Удалить</button>
+                        <button onclick="deletePhotoPrompt('${photo.id}')" class="btn-delete"> Удалить</button>
                     </div>
                 </div>
             </div>`;
@@ -105,35 +100,8 @@ async function viewPhoto(id) {
     document.body.appendChild(modal);
 }
 
-async function exportGallery() {
-    const dataStr = JSON.stringify(photosData, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `hronika-gallery-${new Date().toISOString().split('T')[0]}.json`; a.click();
-    URL.revokeObjectURL(url); alert('✅ Файл сохранён!');
-}
-
-async function importGallery(file) {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const imported = JSON.parse(e.target.result);
-            if (!Array.isArray(imported)) { alert('❌ Неверный формат'); return; }
-            if (confirm(`Импортировать ${imported.length} фото? Текущие данные будут заменены.`)) {
-                photosData = imported;
-                await savePhotos(); renderGallery();
-                alert('✅ Импорт завершён!');
-            }
-        } catch (err) { alert('❌ Ошибка: ' + err.message); }
-    };
-    reader.readAsText(file);
-}
-
 window.renderGallery = renderGallery;
 window.addPhoto = addPhoto;
 window.editPhoto = editPhoto;
 window.deletePhotoPrompt = deletePhotoPrompt;
 window.viewPhoto = viewPhoto;
-window.exportGallery = exportGallery;
-window.importGallery = importGallery;
