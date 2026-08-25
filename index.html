@@ -37,7 +37,7 @@
                 <div class="gallery-header">
                     <h2>Фото</h2>
                 </div>
-                <div id="photoContent" class="gallery-grid"></div>
+                <div id="photoContent" class="gallery-grid-container"></div>
             </section>
 
             <section id="screenBooks" class="screen">
@@ -60,6 +60,10 @@
         </main>
     </div>
 
+    <!-- FIREBASE (обязательно первым, тип module) -->
+    <script type="module" src="js/firebase-config.js"></script>
+    
+    <!-- ОСНОВНЫЕ СКРИПТЫ -->
     <script src="js/app.js"></script>
     <script src="js/calendar.js"></script>
     <script src="js/studies.js"></script>
