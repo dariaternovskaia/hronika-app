@@ -3,48 +3,21 @@ const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель'
                     'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
 const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-let challenges = [];
+let challenges = JSON.parse(localStorage.getItem('hronika_challenges') || '[]');
 
-// Загрузка из Firebase
-function loadChallenges() {
-    return new Promise((resolve) => {
-        fbDb.ref('challenges').once('value')
-            .then(snapshot => {
-                if (snapshot.exists()) {
-                    challenges = snapshot.val();
-                    if (!Array.isArray(challenges)) challenges = [];
-                    migrateChallenges();
-                } else {
-                    challenges = [];
-                }
-                resolve();
-            })
-            .catch(err => {
-                console.error('Ошибка загрузки:', err);
-                challenges = [];
-                resolve();
-            });
-    });
-}
-
-function migrateChallenges() {
-    let needsSave = false;
-    challenges = challenges.map(ch => {
-        if (!ch.content) { ch.content = { amount: 0, unit: 'pages', customUnit: '', note: '' }; needsSave = true; }
-        if (!ch.norm) { ch.norm = { amount: 0, unit: ch.content.unit }; needsSave = true; }
-        if (!ch.frequency) { ch.frequency = { type: 'daily', days: [] }; needsSave = true; }
-        return ch;
-    });
-    if (needsSave) saveChallenges();
-}
-
-function saveChallenges() {
-    fbDb.ref('challenges').set(challenges)
-        .catch(err => console.error('Ошибка сохранения:', err));
-}
+// Миграция
+let needsSave = false;
+challenges = challenges.map(ch => {
+    if (!ch.content) { ch.content = { amount: 0, unit: 'pages', customUnit: '', note: '' }; needsSave = true; }
+    if (!ch.norm) { ch.norm = { amount: 0, unit: ch.content.unit }; needsSave = true; }
+    if (!ch.frequency) { ch.frequency = { type: 'daily', days: [] }; needsSave = true; }
+    return ch;
+});
+if (needsSave) localStorage.setItem('hronika_challenges', JSON.stringify(challenges));
 
 function daysInMonth(m, y) { return new Date(y, m + 1, 0).getDate(); }
 function generateId() { return 'ch_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }
+function saveChallenges() { localStorage.setItem('hronika_challenges', JSON.stringify(challenges)); }
 
 function getEffectiveEndDate(ch) {
     if (ch.endDate) return ch.endDate;
@@ -61,9 +34,7 @@ function parseDateInput(s) {
     return { day: d, month: m - 1, year: y };
 }
 
-// ========== ОТРИСОВКА ==========
 async function renderCalendar() {
-    await loadChallenges();
     const container = document.getElementById('calendar');
     if (!container) return;
 
@@ -187,7 +158,6 @@ function renderChallengeBars() {
     }
 }
 
-// ========== МОДАЛКА ==========
 function openChallengeModal(id = null) {
     const isEdit = id !== null;
     const ch = isEdit ? challenges.find(c => c.id === id) : null;
@@ -278,17 +248,17 @@ function openChallengeModal(id = null) {
     document.body.insertAdjacentHTML('beforeend', html);
 
     const modal = document.getElementById('challengeModal');
-    const noEndCheckbox = document.getElementById('chNoEnd');
-    const endDateInput = document.getElementById('chEnd');
-    const contentUnitSelect = document.getElementById('contentUnit');
-    const customUnitContainer = document.getElementById('customUnitContainer');
-    const freqTypeSelect = document.getElementById('freqType');
-    const weekDaysContainer = document.getElementById('weekDaysContainer');
-    const normUnitSelect = document.getElementById('normUnit');
-
-    noEndCheckbox.addEventListener('change', function() { endDateInput.disabled = this.checked; endDateInput.style.opacity = this.checked ? '0.5' : '1'; });
-    contentUnitSelect.addEventListener('change', function() { customUnitContainer.style.display = this.value === 'custom' ? 'block' : 'none'; normUnitSelect.value = this.value; });
-    freqTypeSelect.addEventListener('change', function() { weekDaysContainer.style.display = this.value === 'weekly' ? 'block' : 'none'; });
+    document.getElementById('chNoEnd').addEventListener('change', function() {
+        document.getElementById('chEnd').disabled = this.checked;
+        document.getElementById('chEnd').style.opacity = this.checked ? '0.5' : '1';
+    });
+    document.getElementById('contentUnit').addEventListener('change', function() {
+        document.getElementById('customUnitContainer').style.display = this.value === 'custom' ? 'block' : 'none';
+        document.getElementById('normUnit').value = this.value;
+    });
+    document.getElementById('freqType').addEventListener('change', function() {
+        document.getElementById('weekDaysContainer').style.display = this.value === 'weekly' ? 'block' : 'none';
+    });
     document.getElementById('cancelChBtn').addEventListener('click', () => modal.remove());
     modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
 
@@ -353,7 +323,7 @@ function importChallenges(file) {
         try {
             const imported = JSON.parse(e.target.result);
             if (!Array.isArray(imported)) { alert('❌ Неверный формат'); return; }
-            if (confirm(`Импортировать ${imported.length} челленджей? Текущие данные будут заменены.`)) {
+            if (confirm(`Импортировать ${imported.length} челленджей?`)) {
                 challenges = imported;
                 saveChallenges();
                 renderCalendar();
@@ -365,3 +335,4 @@ function importChallenges(file) {
 }
 
 window.renderCalendar = renderCalendar;
+document.addEventListener('DOMContentLoaded', renderCalendar);

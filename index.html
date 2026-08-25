@@ -52,26 +52,6 @@
         </main>
     </div>
 
-    <!-- FIREBASE через CDN (без модулей) -->
-    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyCdQ9FwLCMjaqBtXUEJFRCh0jbt-sSdg8",
-            authDomain: "hronika-app.firebaseapp.com",
-            databaseURL: "https://hronika-app-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "hronika-app",
-            storageBucket: "hronika-app.firebasestorage.app",
-            messagingSenderId: "972914332558",
-            appId: "1:972914332558:web:1e950aa0068326f1ae8adf",
-            measurementId: "G-BYGVESDQLY"
-        };
-        const fbApp = firebase.initializeApp(firebaseConfig);
-        const fbDb = firebase.database();
-        console.log('✅ Firebase подключён');
-    </script>
-
-    <!-- ОСНОВНЫЕ СКРИПТЫ -->
     <script src="js/app.js"></script>
     <script src="js/calendar.js"></script>
     <script src="js/studies.js"></script>
