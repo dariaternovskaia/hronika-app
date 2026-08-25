@@ -1,5 +1,4 @@
 const SYNC_KEY = 'hronika_last_sync';
-const SYNC_DIR_KEY = 'hronika_sync_dir_handle';
 
 function collectAllData() {
     return {
@@ -35,21 +34,16 @@ function showToast(message, isError = false) {
     setTimeout(() => toast.remove(), 3000);
 }
 
-// Сохранить всё в папку TeraBox
 async function syncSaveToCloud() {
     const data = collectAllData();
     const fileName = `hronika-backup-${new Date().toISOString().split('T')[0]}-${Date.now()}.json`;
     const fileContent = JSON.stringify(data, null, 2);
 
-    // File System Access API (Chrome/Edge на десктопе)
     if ('showSaveFilePicker' in window) {
         try {
             const handle = await window.showSaveFilePicker({
                 suggestedName: fileName,
-                types: [{
-                    description: 'JSON файл Хроники',
-                    accept: { 'application/json': ['.json'] }
-                }]
+                types: [{ description: 'JSON файл Хроники', accept: { 'application/json': ['.json'] } }]
             });
             const writable = await handle.createWritable();
             await writable.write(fileContent);
@@ -63,7 +57,6 @@ async function syncSaveToCloud() {
         }
     }
 
-    // Фолбэк: обычное скачивание
     const blob = new Blob([fileContent], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -75,40 +68,26 @@ async function syncSaveToCloud() {
     showToast('✅ Файл скачан! Перемести его в папку TeraBox');
 }
 
-// Загрузить всё из файла
 function syncLoadFromCloud(file) {
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
             const data = JSON.parse(e.target.result);
-            if (!data.version || !data.lastSaved) {
-                alert('❌ Неверный формат файла');
-                return;
-            }
-            
+            if (!data.version || !data.lastSaved) { alert('❌ Неверный формат файла'); return; }
             const localData = collectAllData();
             const localTime = new Date(localData.lastSaved || 0);
             const cloudTime = new Date(data.lastSaved);
-            
             if (cloudTime <= localTime) {
                 if (!confirm('⚠️ Файл СТАРЕЕ локальных данных. Всё равно заменить?')) return;
             } else {
                 if (!confirm(`✅ Файл НОВЕЕ (сохранён ${formatDate(data.lastSaved)}). Заменить все данные?`)) return;
             }
-            
             distributeData(data);
             showToast('✅ Все данные загружены!');
-            
-            // Перерисовать все разделы
             if (typeof renderCalendar === 'function') renderCalendar();
             if (typeof renderStudies === 'function') renderStudies();
             if (typeof renderGallery === 'function') renderGallery();
-            if (typeof renderBooks === 'function') renderBooks();
-            if (typeof renderMovies === 'function') renderMovies();
-            
-        } catch (err) {
-            alert('❌ Ошибка: ' + err.message);
-        }
+        } catch (err) { alert('❌ Ошибка: ' + err.message); }
     };
     reader.readAsText(file);
 }
@@ -126,10 +105,10 @@ function showSyncMenu() {
     
     const menu = document.createElement('div');
     menu.id = 'syncMenu';
-    menu.style.cssText = 'position:fixed;top:70px;right:20px;background:#141a24;border:1px solid #1f2838;border-radius:12px;padding:16px;z-index:1000;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+    menu.style.cssText = 'position:fixed;top:70px;right:20px;background:#141a24;border:1px solid #1f2838;border-radius:12px;padding:16px;z-index:1000;min-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
     
     const lastSync = localStorage.getItem(SYNC_KEY);
-    const lastSyncText = lastSync ? `Последнее сохранение: ${formatDate(lastSync)}` : 'Ещё не сохранялось';
+    const lastSyncText = lastSync ? `Последнее: ${formatDate(lastSync)}` : 'Ещё не сохранялось';
     
     menu.innerHTML = `
         <div style="font-size:13px;color:#7a8ba8;margin-bottom:12px;">${lastSyncText}</div>
@@ -139,10 +118,10 @@ function showSyncMenu() {
             <input type="file" id="syncLoadFile" accept=".json" style="display:none;" />
         </label>
         <div style="font-size:11px;color:#5a6a7a;margin-top:12px;line-height:1.5;background:#0b0e14;padding:10px;border-radius:8px;">
-            <strong>Как работает:</strong><br>
-            💾 <strong>Сохранить</strong> → выбери папку TeraBox → файл туда упадёт → TeraBox сам синхронизирует<br>
-            📂 <strong>Загрузить</strong> → выбери файл из папки TeraBox → всё восстановится<br>
-            ⚡ Работает на всех устройствах через TeraBox
+            <strong>⚠️ ВАЖНО:</strong><br>
+            Когда откроется окно "Сохранить как" — <strong>перейди в папку TeraBox</strong> (например, C:\\Users\\Ты\\TeraBox\\) и сохрани туда.<br><br>
+            TeraBox сам синхронизирует файл в облако.<br>
+            На телефоне: скачай файл из TeraBox → нажми "Загрузить" → выбери файл.
         </div>
     `;
     
@@ -174,11 +153,8 @@ function showSyncReminder() {
     if (!checkSyncNeeded()) return;
     const reminder = document.createElement('div');
     reminder.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#2a6a4a;color:#e8edf5;padding:14px 20px;border-radius:12px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,0.3);font-size:13px;cursor:pointer;max-width:320px;';
-    reminder.innerHTML = '⚠️ Данные не сохранены более 2 часов.<br><strong>Нажми, чтобы сохранить всё в TeraBox.</strong>';
-    reminder.onclick = () => {
-        showSyncMenu();
-        reminder.remove();
-    };
+    reminder.innerHTML = '️ Данные не сохранены более 2 часов.<br><strong>Нажми, чтобы сохранить всё.</strong>';
+    reminder.onclick = () => { showSyncMenu(); reminder.remove(); };
     document.body.appendChild(reminder);
     setTimeout(() => reminder.remove(), 10000);
 }

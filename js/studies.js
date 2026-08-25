@@ -110,7 +110,7 @@ async function renderStudies() {
 
 function getFileIcon(type, fileType) {
     if (type === 'link') return '🔗';
-    const icons = { pdf: '📕', audio: '🎵', video: '🎬', image: '🖼️', other: '' };
+    const icons = { pdf: '', audio: '🎵', video: '🎬', image: '🖼️', other: '📄' };
     return icons[fileType] || '📄';
 }
 
@@ -189,6 +189,7 @@ async function deleteItem(itemId, folderId) {
     if (folder) { folder.items = folder.items.filter(item => item.id !== itemId); await saveStudies(); renderStudies(); }
 }
 
+// ГЛОБАЛЬНЫЙ ЭКСПОРТ
 window.renderStudies = renderStudies;
 window.switchSubject = switchSubject;
 window.openFolder = openFolder;
@@ -198,3 +199,5 @@ window.deleteFolderPrompt = deleteFolderPrompt;
 window.addItem = addItem;
 window.deleteItem = deleteItem;
 window.viewImage = viewImage;
+window.loadStudies = loadStudies;
+window.saveStudies = saveStudies;
