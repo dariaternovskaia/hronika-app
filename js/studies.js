@@ -7,6 +7,7 @@ function loadStudies() {
         const raw = localStorage.getItem(STORAGE_KEY);
         studiesData = raw ? JSON.parse(raw) : [];
         if (!Array.isArray(studiesData)) studiesData = [];
+        console.log('📚 Загружено папок:', studiesData.length);
     } catch (e) {
         console.error('Ошибка загрузки:', e);
         studiesData = [];
@@ -16,8 +17,9 @@ function loadStudies() {
 function saveStudies() {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(studiesData));
+        console.log('💾 Сохранено папок:', studiesData.length);
     } catch (e) {
-        alert('⚠️ Не удалось сохранить: превышен лимит хранилища. Удали старые файлы.');
+        alert('️ Не удалось сохранить: превышен лимит хранилища.');
         console.error(e);
     }
 }
@@ -29,28 +31,48 @@ const subjects = {
 };
 
 let currentSubject = 'math';
-let currentFolderId = null; // null = корень раздела
+let currentFolderId = null;
 
 // ========== УТИЛИТЫ ==========
-function getRootFolder(subject) {
-    // Находим или создаём корневую папку раздела
-    let root = studiesData.find(f => f.subject === subject && f.parentId === null);
-    if (!root) {
-        root = {
-            id: subject + '_root_' + Date.now(),
-            name: subjects[subject].name,
-            subject: subject,
+function findFolder(id) {
+    const folder = studiesData.find(f => f.id === id);
+    console.log('🔍 findFolder(', id, ') →', folder ? folder.name : 'не найдена');
+    return folder;
+}
+
+function getCurrentFolder() {
+    if (currentFolderId === null) {
+        // Корень раздела — создаём виртуальную папку
+        return {
+            id: 'root_' + currentSubject,
+            name: subjects[currentSubject].name,
+            subject: currentSubject,
+            parentId: null,
+            items: getRootItems()
+        };
+    }
+    return findFolder(currentFolderId);
+}
+
+function getRootItems() {
+    // Файлы, которые лежат прямо в корне раздела (не в папках)
+    const rootFolder = studiesData.find(f => f.id === 'root_' + currentSubject);
+    return rootFolder ? (rootFolder.items || []) : [];
+}
+
+function saveRootItems(items) {
+    let rootFolder = studiesData.find(f => f.id === 'root_' + currentSubject);
+    if (!rootFolder) {
+        rootFolder = {
+            id: 'root_' + currentSubject,
+            name: subjects[currentSubject].name,
+            subject: currentSubject,
             parentId: null,
             items: []
         };
-        studiesData.push(root);
-        saveStudies();
+        studiesData.push(rootFolder);
     }
-    return root;
-}
-
-function findFolder(id) {
-    return studiesData.find(f => f.id === id);
+    rootFolder.items = items;
 }
 
 function escapeHtml(str) {
@@ -59,16 +81,23 @@ function escapeHtml(str) {
 }
 
 function getFileIcon(type, fileType) {
-    if (type === 'link') return '🔗';
+    if (type === 'link') return '';
     const icons = { pdf: '📕', audio: '🎵', video: '🎬', image: '️' };
-    return icons[fileType] || '📄';
+    return icons[fileType] || '';
 }
 
 // ========== ОТРИСОВКА ==========
 async function renderStudies() {
     const container = document.getElementById('studyContent');
     if (!container) return;
+    
     loadStudies();
+    
+    console.log('📊 renderStudies:', {
+        subject: currentSubject,
+        currentFolderId: currentFolderId,
+        totalFolders: studiesData.length
+    });
 
     let html = '';
 
@@ -112,22 +141,20 @@ async function renderStudies() {
     html += `<button onclick="window.addItem('link')" style="background:#2a4a6a;color:#e8edf5;border:none;border-radius:12px;padding:10px 16px;font-size:13px;cursor:pointer;font-family:inherit;">+ Добавить ссылку</button>`;
     html += `</div>`;
 
-    // Определяем текущую папку
-    let currentFolder;
-    if (currentFolderId === null) {
-        currentFolder = getRootFolder(currentSubject);
-    } else {
-        currentFolder = findFolder(currentFolderId);
-    }
-
+    // Текущая папка
+    const currentFolder = getCurrentFolder();
     if (!currentFolder) {
         html += `<div style="text-align:center;padding:40px;color:#7a8ba8;">Ошибка: папка не найдена</div>`;
         container.innerHTML = html;
         return;
     }
 
+    console.log('📁 Текущая папка:', currentFolder.name, 'ID:', currentFolder.id);
+
     // Подпапки
     const childFolders = studiesData.filter(f => f.subject === currentSubject && f.parentId === currentFolder.id);
+    console.log(' Подпапок:', childFolders.length);
+    
     if (childFolders.length > 0) {
         html += `<div style="margin-bottom:20px;"><div style="font-size:12px;color:#7a8ba8;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Папки</div>`;
         childFolders.forEach(folder => {
@@ -142,6 +169,8 @@ async function renderStudies() {
 
     // Файлы и ссылки в текущей папке
     const items = currentFolder.items || [];
+    console.log('📄 Файлов в текущей папке:', items.length);
+    
     if (items.length > 0) {
         html += `<div><div style="font-size:12px;color:#7a8ba8;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Файлы и ссылки</div>`;
         items.forEach(item => {
@@ -184,17 +213,20 @@ function viewImage(url) {
 
 // ========== ДЕЙСТВИЯ ==========
 function switchSubject(subject) {
+    console.log('🔄 switchSubject:', subject);
     currentSubject = subject;
     currentFolderId = null;
     renderStudies();
 }
 
 function openFolder(id) {
+    console.log('📂 openFolder:', id);
     currentFolderId = id;
     renderStudies();
 }
 
 function goToRoot() {
+    console.log('🏠 goToRoot');
     currentFolderId = null;
     renderStudies();
 }
@@ -203,8 +235,13 @@ function createFolder() {
     const name = prompt('Название папки:');
     if (!name || !name.trim()) return;
 
-    const parentFolder = currentFolderId === null ? getRootFolder(currentSubject) : findFolder(currentFolderId);
-    if (!parentFolder) return;
+    const parentFolder = getCurrentFolder();
+    if (!parentFolder) {
+        alert('Ошибка: не найдена текущая папка');
+        return;
+    }
+
+    console.log('➕ createFolder:', name, 'в', parentFolder.name);
 
     studiesData.push({
         id: 'folder_' + Date.now(),
@@ -220,7 +257,6 @@ function createFolder() {
 function deleteFolderPrompt(id) {
     if (!confirm('Удалить папку и всё её содержимое?')) return;
 
-    // Рекурсивное удаление подпапок
     function collectIds(folderId) {
         const ids = [folderId];
         studiesData.filter(f => f.parentId === folderId).forEach(f => {
@@ -238,11 +274,13 @@ function deleteFolderPrompt(id) {
 }
 
 async function addItem(type) {
-    const targetFolder = currentFolderId === null ? getRootFolder(currentSubject) : findFolder(currentFolderId);
+    const targetFolder = getCurrentFolder();
     if (!targetFolder) {
-        alert('Ошибка: папка не найдена');
+        alert('Ошибка: не найдена текущая папка');
         return;
     }
+
+    console.log('📥 addItem:', type, 'в', targetFolder.name, 'ID:', targetFolder.id);
 
     if (type === 'link') {
         const name = prompt('Название ссылки:');
@@ -260,6 +298,12 @@ async function addItem(type) {
             addedDate: new Date().toISOString().split('T')[0],
             comment: comment.trim()
         });
+
+        // Если это корневая папка, сохраняем отдельно
+        if (targetFolder.id === 'root_' + currentSubject) {
+            saveRootItems(targetFolder.items);
+        }
+        
         saveStudies();
         renderStudies();
 
@@ -271,7 +315,6 @@ async function addItem(type) {
             const file = e.target.files[0];
             if (!file) return;
 
-            // Проверка размера (лимит 5MB для localStorage)
             const maxSize = 5 * 1024 * 1024;
             if (file.size > maxSize) {
                 const proceed = confirm(`⚠️ Файл большой (${(file.size / 1024 / 1024).toFixed(1)} MB). localStorage имеет лимит ~10MB. Загрузить всё равно?`);
@@ -300,12 +343,17 @@ async function addItem(type) {
                     addedDate: new Date().toISOString().split('T')[0],
                     comment: comment.trim()
                 });
+
+                // Если это корневая папка, сохраняем отдельно
+                if (targetFolder.id === 'root_' + currentSubject) {
+                    saveRootItems(targetFolder.items);
+                }
+
                 try {
                     saveStudies();
                     renderStudies();
                 } catch (err) {
                     alert('❌ Не удалось сохранить: ' + err.message);
-                    // Откатываем последний элемент
                     targetFolder.items.pop();
                 }
             };
@@ -319,10 +367,16 @@ async function addItem(type) {
 function deleteItem(itemId) {
     if (!confirm('Удалить этот элемент?')) return;
 
-    const targetFolder = currentFolderId === null ? getRootFolder(currentSubject) : findFolder(currentFolderId);
+    const targetFolder = getCurrentFolder();
     if (!targetFolder) return;
 
     targetFolder.items = (targetFolder.items || []).filter(item => item.id !== itemId);
+
+    // Если это корневая папка, сохраняем отдельно
+    if (targetFolder.id === 'root_' + currentSubject) {
+        saveRootItems(targetFolder.items);
+    }
+
     saveStudies();
     renderStudies();
 }
