@@ -27,30 +27,22 @@
             </section>
 
             <section id="screenStudies" class="screen">
-                <div class="studies-header">
-                    <h2>Учебные материалы</h2>
-                </div>
+                <div class="studies-header"><h2>Учебные материалы</h2></div>
                 <div id="studyContent" class="studies-content"></div>
             </section>
 
             <section id="screenGallery" class="screen">
-                <div class="gallery-header">
-                    <h2>Фото</h2>
-                </div>
-                <div id="photoContent" class="gallery-grid-container"></div>
+                <div class="gallery-header"><h2>Фото</h2></div>
+                <div id="photoContent"></div>
             </section>
 
             <section id="screenBooks" class="screen">
-                <div class="diary-header">
-                    <h2>Читательский дневник</h2>
-                </div>
+                <div class="diary-header"><h2>Читательский дневник</h2></div>
                 <div id="readerContent" class="diary-list"></div>
             </section>
 
             <section id="screenMovies" class="screen">
-                <div class="diary-header">
-                    <h2>Кинодневник</h2>
-                </div>
+                <div class="diary-header"><h2>Кинодневник</h2></div>
                 <div id="cinemaContent" class="diary-list"></div>
             </section>
 
@@ -60,9 +52,25 @@
         </main>
     </div>
 
-    <!-- FIREBASE (обязательно первым, тип module) -->
-    <script type="module" src="js/firebase-config.js"></script>
-    
+    <!-- FIREBASE через CDN (без модулей) -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCdQ9FwLCMjaqBtXUEJFRCh0jbt-sSdg8",
+            authDomain: "hronika-app.firebaseapp.com",
+            databaseURL: "https://hronika-app-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "hronika-app",
+            storageBucket: "hronika-app.firebasestorage.app",
+            messagingSenderId: "972914332558",
+            appId: "1:972914332558:web:1e950aa0068326f1ae8adf",
+            measurementId: "G-BYGVESDQLY"
+        };
+        const fbApp = firebase.initializeApp(firebaseConfig);
+        const fbDb = firebase.database();
+        console.log('✅ Firebase подключён');
+    </script>
+
     <!-- ОСНОВНЫЕ СКРИПТЫ -->
     <script src="js/app.js"></script>
     <script src="js/calendar.js"></script>
