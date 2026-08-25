@@ -1,40 +1,81 @@
-// ========== СИСТЕМА СИНХРОНИЗАЦИИ ЧЕРЕЗ ОБЛАКО ==========
-
 const SYNC_KEY = 'hronika_last_sync';
-const SYNC_FILE_NAME = 'hronika-backup';
+const SYNC_DIR_KEY = 'hronika_sync_dir_handle';
 
 function collectAllData() {
-    const data = {
-        version: 1,
+    return {
+        version: 2,
         lastSaved: new Date().toISOString(),
         challenges: JSON.parse(localStorage.getItem('hronika_challenges') || '[]'),
         studies: JSON.parse(localStorage.getItem('hronika_studies') || '[]'),
-        photos: JSON.parse(localStorage.getItem('hronika_photos') || '[]')
+        photos: JSON.parse(localStorage.getItem('hronika_photos') || '[]'),
+        books: JSON.parse(localStorage.getItem('hronika_books') || '[]'),
+        movies: JSON.parse(localStorage.getItem('hronika_movies') || '[]')
     };
-    return data;
 }
 
 function distributeData(data) {
     if (data.challenges) localStorage.setItem('hronika_challenges', JSON.stringify(data.challenges));
     if (data.studies) localStorage.setItem('hronika_studies', JSON.stringify(data.studies));
     if (data.photos) localStorage.setItem('hronika_photos', JSON.stringify(data.photos));
+    if (data.books) localStorage.setItem('hronika_books', JSON.stringify(data.books));
+    if (data.movies) localStorage.setItem('hronika_movies', JSON.stringify(data.movies));
     if (data.lastSaved) localStorage.setItem(SYNC_KEY, data.lastSaved);
 }
 
-function syncSaveToCloud() {
+function formatDate(isoString) {
+    const d = new Date(isoString);
+    return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function showToast(message, isError = false) {
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (isError ? ' error' : '');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+// Сохранить всё в папку TeraBox
+async function syncSaveToCloud() {
     const data = collectAllData();
-    const dataStr = JSON.stringify(data, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
+    const fileName = `hronika-backup-${new Date().toISOString().split('T')[0]}-${Date.now()}.json`;
+    const fileContent = JSON.stringify(data, null, 2);
+
+    // File System Access API (Chrome/Edge на десктопе)
+    if ('showSaveFilePicker' in window) {
+        try {
+            const handle = await window.showSaveFilePicker({
+                suggestedName: fileName,
+                types: [{
+                    description: 'JSON файл Хроники',
+                    accept: { 'application/json': ['.json'] }
+                }]
+            });
+            const writable = await handle.createWritable();
+            await writable.write(fileContent);
+            await writable.close();
+            localStorage.setItem(SYNC_KEY, data.lastSaved);
+            showToast('✅ Сохранено! TeraBox синхронизирует файл');
+            return;
+        } catch (e) {
+            if (e.name === 'AbortError') return;
+            console.error('Ошибка сохранения:', e);
+        }
+    }
+
+    // Фолбэк: обычное скачивание
+    const blob = new Blob([fileContent], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${SYNC_FILE_NAME}-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
     localStorage.setItem(SYNC_KEY, data.lastSaved);
-    showToast('✅ Файл сохранён! Перемести его в облачную папку (Яндекс.Диск)');
+    showToast('✅ Файл скачан! Перемести его в папку TeraBox');
 }
 
+// Загрузить всё из файла
 function syncLoadFromCloud(file) {
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -44,21 +85,29 @@ function syncLoadFromCloud(file) {
                 alert('❌ Неверный формат файла');
                 return;
             }
+            
             const localData = collectAllData();
             const localTime = new Date(localData.lastSaved || 0);
             const cloudTime = new Date(data.lastSaved);
+            
             if (cloudTime <= localTime) {
-                if (!confirm('⚠️ Файл из облака СТАРЕЕ локальных данных. Всё равно заменить?')) return;
+                if (!confirm('⚠️ Файл СТАРЕЕ локальных данных. Всё равно заменить?')) return;
             } else {
-                if (!confirm(`✅ Файл из облака НОВЕЕ (сохранён ${formatDate(data.lastSaved)}). Заменить локальные данные?`)) return;
+                if (!confirm(`✅ Файл НОВЕЕ (сохранён ${formatDate(data.lastSaved)}). Заменить все данные?`)) return;
             }
+            
             distributeData(data);
-            showToast('✅ Данные загружены из облака!');
+            showToast('✅ Все данные загружены!');
+            
+            // Перерисовать все разделы
             if (typeof renderCalendar === 'function') renderCalendar();
             if (typeof renderStudies === 'function') renderStudies();
             if (typeof renderGallery === 'function') renderGallery();
+            if (typeof renderBooks === 'function') renderBooks();
+            if (typeof renderMovies === 'function') renderMovies();
+            
         } catch (err) {
-            alert('❌ Ошибка чтения файла: ' + err.message);
+            alert('❌ Ошибка: ' + err.message);
         }
     };
     reader.readAsText(file);
@@ -66,59 +115,51 @@ function syncLoadFromCloud(file) {
 
 function checkSyncNeeded() {
     const lastSync = localStorage.getItem(SYNC_KEY);
-    if (!lastSync) return false;
-    const lastSyncTime = new Date(lastSync);
-    const now = new Date();
-    const hoursDiff = (now - lastSyncTime) / (1000 * 60 * 60);
+    if (!lastSync) return true;
+    const hoursDiff = (Date.now() - new Date(lastSync).getTime()) / (1000 * 60 * 60);
     return hoursDiff > 2;
-}
-
-function formatDate(isoString) {
-    const d = new Date(isoString);
-    return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
-
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
 }
 
 function showSyncMenu() {
     const existing = document.getElementById('syncMenu');
     if (existing) { existing.remove(); return; }
+    
     const menu = document.createElement('div');
     menu.id = 'syncMenu';
-    menu.style.cssText = 'position:fixed;top:70px;right:20px;background:#141a24;border:1px solid #1f2838;border-radius:12px;padding:16px;z-index:1000;min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+    menu.style.cssText = 'position:fixed;top:70px;right:20px;background:#141a24;border:1px solid #1f2838;border-radius:12px;padding:16px;z-index:1000;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+    
     const lastSync = localStorage.getItem(SYNC_KEY);
     const lastSyncText = lastSync ? `Последнее сохранение: ${formatDate(lastSync)}` : 'Ещё не сохранялось';
+    
     menu.innerHTML = `
         <div style="font-size:13px;color:#7a8ba8;margin-bottom:12px;">${lastSyncText}</div>
-        <button id="syncSaveBtn" style="width:100%;background:#2a4a6a;color:#e8edf5;border:none;border-radius:8px;padding:10px;font-size:13px;cursor:pointer;font-family:inherit;margin-bottom:8px;"> Сохранить в облако</button>
-        <label style="display:block;width:100%;background:#1a2230;color:#e8edf5;border:1px solid #1f2838;border-radius:8px;padding:10px;font-size:13px;cursor:pointer;font-family:inherit;text-align:center;">
-            📂 Загрузить из облака
+        <button id="syncSaveBtn" style="width:100%;background:#2a6a4a;color:#e8edf5;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;margin-bottom:8px;">💾 Сохранить всё в TeraBox</button>
+        <label style="display:block;width:100%;background:#2a4a6a;color:#e8edf5;border:none;border-radius:8px;padding:12px;font-size:14px;cursor:pointer;font-family:inherit;text-align:center;margin-bottom:8px;">
+            📂 Загрузить всё из TeraBox
             <input type="file" id="syncLoadFile" accept=".json" style="display:none;" />
         </label>
-        <div style="font-size:11px;color:#5a6a7a;margin-top:12px;line-height:1.4;">
-            💡 Как работает:<br>
-            1. "Сохранить" — скачает файл<br>
-            2. Перемести его в облачную папку (Яндекс.Диск)<br>
-            3. На другом устройстве — "Загрузить" и выбери файл
+        <div style="font-size:11px;color:#5a6a7a;margin-top:12px;line-height:1.5;background:#0b0e14;padding:10px;border-radius:8px;">
+            <strong>Как работает:</strong><br>
+            💾 <strong>Сохранить</strong> → выбери папку TeraBox → файл туда упадёт → TeraBox сам синхронизирует<br>
+            📂 <strong>Загрузить</strong> → выбери файл из папки TeraBox → всё восстановится<br>
+            ⚡ Работает на всех устройствах через TeraBox
         </div>
     `;
+    
     document.body.appendChild(menu);
+    
     document.getElementById('syncSaveBtn').addEventListener('click', () => {
         syncSaveToCloud();
         menu.remove();
     });
+    
     document.getElementById('syncLoadFile').addEventListener('change', function(e) {
         if (e.target.files.length > 0) {
             syncLoadFromCloud(e.target.files[0]);
             menu.remove();
         }
     });
+    
     setTimeout(() => {
         document.addEventListener('click', function closeMenu(e) {
             if (!menu.contains(e.target) && e.target.id !== 'syncBtn') {
@@ -132,8 +173,8 @@ function showSyncMenu() {
 function showSyncReminder() {
     if (!checkSyncNeeded()) return;
     const reminder = document.createElement('div');
-    reminder.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#2a4a6a;color:#e8edf5;padding:12px 20px;border-radius:12px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,0.3);font-size:13px;cursor:pointer;max-width:300px;';
-    reminder.innerHTML = '️ Данные не синхронизированы более 2 часов. <strong>Нажми, чтобы сохранить в облако.</strong>';
+    reminder.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#2a6a4a;color:#e8edf5;padding:14px 20px;border-radius:12px;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,0.3);font-size:13px;cursor:pointer;max-width:320px;';
+    reminder.innerHTML = '⚠️ Данные не сохранены более 2 часов.<br><strong>Нажми, чтобы сохранить всё в TeraBox.</strong>';
     reminder.onclick = () => {
         showSyncMenu();
         reminder.remove();
@@ -145,3 +186,4 @@ function showSyncReminder() {
 window.showSyncMenu = showSyncMenu;
 window.syncSaveToCloud = syncSaveToCloud;
 window.syncLoadFromCloud = syncLoadFromCloud;
+window.showSyncReminder = showSyncReminder;
